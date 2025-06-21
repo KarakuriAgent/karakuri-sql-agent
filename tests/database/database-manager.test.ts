@@ -61,7 +61,7 @@ describe('DatabaseManager', () => {
 
     // Reset environment variables
     process.env = { ...originalEnv };
-    delete process.env.DATABASE_URL;
+    process.env.DATABASE_URL = undefined;
   });
 
   afterEach(async () => {
