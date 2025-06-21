@@ -448,18 +448,73 @@ describe('SQL Tool', () => {
         },
         {
           sql: 'SELECT * FROM users -- comment\nDROP TABLE users;',
-          expectForbidden: false,
-          description:
-            'SQL with line comment (processed as single statement since only split by semicolon)',
+          expectForbidden: true,
+          description: 'DROP statement with line comment (now properly normalized)',
         },
         {
           sql: '/**/CREATE/**/TABLE/**/ test (id INTEGER)',
           expectForbidden: true,
-          description: 'CREATE statement split by comments',
+          description: 'CREATE statement split by comments (now properly normalized)',
+        },
+        {
+          sql: '--comment\nCREATE TABLE test (id INTEGER)',
+          expectForbidden: true,
+          description: 'CREATE statement after line comment',
+        },
+        {
+          sql: 'SELECT * FROM users -- DROP TABLE users',
+          expectForbidden: false,
+          description: 'Legitimate SELECT with DROP in comment (comment removed)',
         },
       ];
 
       for (const test of commentTests) {
+        vi.clearAllMocks();
+
+        const toolContext = createToolContext(test.sql);
+        const result = await sqlTool.execute(toolContext);
+
+        if (test.expectForbidden) {
+          expect(result.result).toContain(
+            'ERROR: Forbidden SQL operation detected'
+          );
+          expect(mockExecute).not.toHaveBeenCalled();
+        } else {
+          mockExecute.mockResolvedValueOnce(createMockResult([]));
+          expect(result.result).not.toContain(
+            'ERROR: Forbidden SQL operation detected'
+          );
+          expect(result.result).not.toContain('WARNING');
+          expect(mockExecute).toHaveBeenCalledWith(test.sql);
+        }
+      }
+    });
+
+    it('should handle whitespace bypass attacks', async () => {
+      const whitespaceTests = [
+        {
+          sql: 'SELECT   *   FROM   users\n\n\n;\n\n\nCREATE\t\t\tTABLE\ttest\t(id\tINTEGER)',
+          expectForbidden: true,
+          description: 'CREATE statement with excessive whitespace and newlines',
+        },
+        {
+          sql: 'SELECT\t\t*\t\tFROM\t\tusers\t\t\t;\t\t\tDROP\t\t\tTABLE\t\tusers',
+          expectForbidden: true,
+          description: 'DROP statement with tabs as separators',
+        },
+        {
+          sql: 'SELECT    *    FROM    users    WHERE    id    =    1',
+          expectForbidden: false,
+          description: 'Legitimate SELECT with multiple spaces (normalized)',
+        },
+        {
+          sql: '   \n\t   CREATE   \n\t   TABLE   \n\t   test   \n\t   (id INTEGER)   \n\t   ',
+          expectForbidden: true,
+          description: 'CREATE statement with mixed whitespace padding',
+        },
+      ];
+
+      for (const test of whitespaceTests) {
         vi.clearAllMocks();
 
         const toolContext = createToolContext(test.sql);

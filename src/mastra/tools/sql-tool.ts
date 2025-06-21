@@ -77,9 +77,29 @@ const ALLOWED_SQL_PATTERNS = [
 const SELECT_PATTERN = /^\s*SELECT\b/;
 
 // Common function to split and process SQL statements
+const normalizeSql = (sql: string): string => {
+  // First, remove comments
+  let normalized = sql
+    // Remove single-line comments (-- style)
+    .replace(/--.*$/gm, '')
+    // Remove multi-line comments (/* */ style)
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  
+  // Replace multiple consecutive whitespace (including newlines) with single space
+  // but preserve statement boundaries by converting newlines to semicolons where appropriate
+  normalized = normalized
+    // Replace newlines between potential statements with semicolons
+    .replace(/([^;\s])\s*\n\s*([A-Z])/g, '$1; $2')
+    // Collapse multiple whitespace characters into single spaces
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  return normalized;
+};
+
 const splitSqlStatements = (sql: string): string[] => {
-  return sql
-    .trim()
+  const normalizedSql = normalizeSql(sql);
+  return normalizedSql
     .toUpperCase()
     .split(';')
     .map(s => s.trim())
