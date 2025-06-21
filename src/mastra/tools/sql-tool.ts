@@ -84,7 +84,7 @@ const normalizeSql = (sql: string): string => {
     .replace(/--.*$/gm, '')
     // Remove multi-line comments (/* */ style)
     .replace(/\/\*[\s\S]*?\*\//g, '');
-  
+
   // Replace multiple consecutive whitespace (including newlines) with single space
   // but preserve statement boundaries by converting newlines to semicolons where appropriate
   normalized = normalized
@@ -93,7 +93,7 @@ const normalizeSql = (sql: string): string => {
     // Collapse multiple whitespace characters into single spaces
     .replace(/\s+/g, ' ')
     .trim();
-  
+
   return normalized;
 };
 

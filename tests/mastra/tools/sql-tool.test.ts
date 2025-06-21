@@ -449,12 +449,14 @@ describe('SQL Tool', () => {
         {
           sql: 'SELECT * FROM users -- comment\nDROP TABLE users;',
           expectForbidden: true,
-          description: 'DROP statement with line comment (now properly normalized)',
+          description:
+            'DROP statement with line comment (now properly normalized)',
         },
         {
           sql: '/**/CREATE/**/TABLE/**/ test (id INTEGER)',
           expectForbidden: true,
-          description: 'CREATE statement split by comments (now properly normalized)',
+          description:
+            'CREATE statement split by comments (now properly normalized)',
         },
         {
           sql: '--comment\nCREATE TABLE test (id INTEGER)',
@@ -464,7 +466,8 @@ describe('SQL Tool', () => {
         {
           sql: 'SELECT * FROM users -- DROP TABLE users',
           expectForbidden: false,
-          description: 'Legitimate SELECT with DROP in comment (comment removed)',
+          description:
+            'Legitimate SELECT with DROP in comment (comment removed)',
         },
       ];
 
@@ -495,7 +498,8 @@ describe('SQL Tool', () => {
         {
           sql: 'SELECT   *   FROM   users\n\n\n;\n\n\nCREATE\t\t\tTABLE\ttest\t(id\tINTEGER)',
           expectForbidden: true,
-          description: 'CREATE statement with excessive whitespace and newlines',
+          description:
+            'CREATE statement with excessive whitespace and newlines',
         },
         {
           sql: 'SELECT\t\t*\t\tFROM\t\tusers\t\t\t;\t\t\tDROP\t\t\tTABLE\t\tusers',
