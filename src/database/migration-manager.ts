@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
-import { appDatabase } from '../mastra/tools/sql-tool';
+import { appDatabase } from './database-manager';
 
 // Table to manage migration status
 const createMigrationTable = async () => {
@@ -47,10 +47,7 @@ const runMigration = async (filename: string) => {
 
   // Record migration
   const version = filename.replace('.sql', '');
-  await appDatabase.execute({
-    sql: 'INSERT INTO schema_migrations (version) VALUES (?)',
-    args: [version]
-  });
+  await appDatabase.execute(`INSERT INTO schema_migrations (version) VALUES (${version})`);
   
   console.log(`✅ Applied migration: ${filename}`);
 };
@@ -126,10 +123,7 @@ export const rollbackMigration = async (targetVersion?: string) => {
   // This is a simple example that removes the latest migration from records
   try {
     if (targetVersion) {
-      await appDatabase.execute({
-        sql: 'DELETE FROM schema_migrations WHERE version = ?',
-        args: [targetVersion]
-      });
+      await appDatabase.execute(`DELETE FROM schema_migrations WHERE version = ${targetVersion}`);
       console.log(`🔄 Rolled back migration: ${targetVersion}`);
     } else {
       // Rollback the latest migration

@@ -8,7 +8,7 @@ vi.mock('@libsql/client', () => ({
   })),
 }));
 
-vi.mock('../migration-manager', () => ({
+vi.mock('../../src/database/migration-manager', () => ({
   runMigrations: vi.fn(),
 }));
 
@@ -16,8 +16,8 @@ vi.mock('../migration-manager', () => ({
 const originalEnv = process.env;
 
 // Import after mocking
-import { DatabaseManager } from '../database-manager';
-import { runMigrations } from '../migration-manager';
+import { DatabaseManager } from '../../src/database/database-manager';
+import { runMigrations } from '../../src/database/migration-manager';
 import { createClient } from '@libsql/client';
 
 describe('DatabaseManager', () => {

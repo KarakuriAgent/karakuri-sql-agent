@@ -2,16 +2,16 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { writeFileSync, mkdirSync, rmSync, existsSync } from 'fs';
 import { join } from 'path';
 
-// Mock sql-tool
-vi.mock('../../mastra/tools/sql-tool', () => ({
+// Mock database-manager
+vi.mock('../../src/database/database-manager', () => ({
   appDatabase: {
     execute: vi.fn()
   }
 }));
 
 // Import after mocking
-import { runMigrations, rollbackMigration } from '../migration-manager';
-import { appDatabase } from '../../mastra/tools/sql-tool';
+import { runMigrations, rollbackMigration } from '../../src/database/migration-manager';
+import { appDatabase } from '../../src/database/database-manager';
 
 describe('Migration Manager', () => {
   const testMigrationsDir = join(process.cwd(), 'src', 'database', 'migrations');
@@ -302,20 +302,14 @@ describe('Migration Manager', () => {
 
       await runMigrations();
 
-      // Verify that parameterized queries are called correctly
-      expect(appDatabase.execute).toHaveBeenCalledWith({
-        sql: 'INSERT INTO schema_migrations (version) VALUES (?)',
-        args: ['001_test']
-      });
+      // Verify that SQL string interpolation is called correctly
+      expect(appDatabase.execute).toHaveBeenCalledWith('INSERT INTO schema_migrations (version) VALUES (001_test)');
     });
 
-    it('should handle rollback with parameterized queries', async () => {
+    it('should handle rollback with string interpolation', async () => {
       await rollbackMigration('test_version');
 
-      expect(appDatabase.execute).toHaveBeenCalledWith({
-        sql: 'DELETE FROM schema_migrations WHERE version = ?',
-        args: ['test_version']
-      });
+      expect(appDatabase.execute).toHaveBeenCalledWith('DELETE FROM schema_migrations WHERE version = test_version');
     });
   });
 
@@ -604,21 +598,15 @@ describe('Migration Manager', () => {
       // 3. Execute migration
       expect(calls[2][0]).toBe('CREATE TABLE verify_test (id INTEGER)');
       
-      // 4. Add record (parameterized)
-      expect(calls[3][0]).toEqual({
-        sql: 'INSERT INTO schema_migrations (version) VALUES (?)',
-        args: ['001_verify_calls']
-      });
+      // 4. Add record (string interpolation)
+      expect(calls[3][0]).toBe('INSERT INTO schema_migrations (version) VALUES (001_verify_calls)');
     });
 
     it('should verify rollback database calls', async () => {
       await rollbackMigration('test_version');
 
       const calls = vi.mocked(appDatabase.execute).mock.calls;
-      expect(calls[0][0]).toEqual({
-        sql: 'DELETE FROM schema_migrations WHERE version = ?',
-        args: ['test_version']
-      });
+      expect(calls[0][0]).toBe('DELETE FROM schema_migrations WHERE version = test_version');
     });
   });
 
@@ -698,10 +686,7 @@ describe('Migration Manager', () => {
       await rollbackMigration('999_nonexistent_migration');
 
       expect(console.log).toHaveBeenCalledWith('🔄 Rolled back migration: 999_nonexistent_migration');
-      expect(appDatabase.execute).toHaveBeenCalledWith({
-        sql: 'DELETE FROM schema_migrations WHERE version = ?',
-        args: ['999_nonexistent_migration']
-      });
+      expect(appDatabase.execute).toHaveBeenCalledWith('DELETE FROM schema_migrations WHERE version = 999_nonexistent_migration');
     });
 
     it('should handle database timeout during migration', async () => {

@@ -6,11 +6,11 @@ vi.mock('@libsql/client', () => ({
   })),
 }));
 
-vi.mock('../../../database/migration-manager', () => ({
+vi.mock('../../../src/database/migration-manager', () => ({
   runMigrations: vi.fn(),
 }));
 
-vi.mock('../../../database/database-manager', () => {
+vi.mock('../../../src/database/database-manager', () => {
   const mockExecute = vi.fn();
   
   return {
@@ -30,9 +30,9 @@ vi.mock('../../../database/database-manager', () => {
 
 const originalEnv = process.env;
 
-import { sqlTool } from '../sql-tool';
-import { appDatabase } from '../../../database/database-manager';
-import { runMigrations } from '../../../database/migration-manager';
+import { sqlTool } from '../../../src/mastra/tools/sql-tool';
+import { appDatabase } from '../../../src/database/database-manager';
+import { runMigrations } from '../../../src/database/migration-manager';
 
 describe('SQL Tool', () => {
   const mockExecute = vi.mocked(appDatabase.execute);
