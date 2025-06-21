@@ -1,4 +1,4 @@
-import { createClient, Client, ResultSet } from "@libsql/client";
+import { createClient, Client, ResultSet } from '@libsql/client';
 import { runMigrations } from './migration-manager';
 
 export class DatabaseManager {
@@ -22,7 +22,7 @@ export class DatabaseManager {
   }
 
   private getDatabaseUrl(): string {
-    return process.env.DATABASE_URL || "file:app.db";
+    return process.env.DATABASE_URL || 'file:app.db';
   }
 
   async ensureInitialized() {
@@ -45,10 +45,10 @@ export class DatabaseManager {
       await this.client.execute('PRAGMA synchronous = NORMAL;');
       await this.client.execute('PRAGMA cache_size = -64000;'); // 64MB cache
       await this.client.execute('PRAGMA temp_store = MEMORY;');
-      
+
       // Verify connection status
       await this.verifyConnection();
-      
+
       await runMigrations();
       this.isInitialized = true;
       this.isConnected = true;
@@ -93,7 +93,7 @@ export class DatabaseManager {
   getConnectionStatus(): { initialized: boolean; connected: boolean } {
     return {
       initialized: this.isInitialized,
-      connected: this.isConnected
+      connected: this.isConnected,
     };
   }
 
@@ -102,23 +102,25 @@ export class DatabaseManager {
     try {
       await this.client.execute('SELECT 1');
     } catch (error) {
-      throw new Error(`Database connection verification failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Database connection verification failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
   // Execute transaction
   async executeTransaction(queries: string[]): Promise<ResultSet[]> {
     await this.ensureInitialized();
-    
+
     try {
       await this.client.execute('BEGIN TRANSACTION');
       const results: ResultSet[] = [];
-      
+
       for (const query of queries) {
         const result = await this.client.execute(query);
         results.push(result);
       }
-      
+
       await this.client.execute('COMMIT');
       return results;
     } catch (error) {
@@ -152,7 +154,8 @@ export class DatabaseManager {
       DatabaseManager.instance.isInitialized = false;
       DatabaseManager.instance.initializationPromise = null;
       DatabaseManager.instance.isConnected = false;
-      delete (DatabaseManager as typeof DatabaseManager).instance;
+      // @ts-expect-error - Needed for testing to reset singleton instance
+      DatabaseManager.instance = undefined;
     }
   }
 }

@@ -10,7 +10,12 @@
     "test:coverage": "vitest run --coverage",
     "dev": "mastra dev",
     "build": "mastra build",
-    "start": "mastra start"
+    "start": "mastra start",
+    "lint": "eslint . --ext .ts,.js",
+    "lint:fix": "eslint . --ext .ts,.js --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
@@ -30,8 +35,14 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.3",
+    "@typescript-eslint/eslint-plugin": "^8.34.1",
+    "@typescript-eslint/parser": "^8.34.1",
     "@vitest/ui": "^1.0.0",
+    "eslint": "^9.29.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-prettier": "^5.5.0",
     "mastra": "^0.10.6",
+    "prettier": "^3.5.3",
     "typescript": "^5.8.3",
     "vitest": "^1.0.0"
   }

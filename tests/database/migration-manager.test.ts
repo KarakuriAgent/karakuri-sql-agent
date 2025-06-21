@@ -5,16 +5,24 @@ import { join } from 'path';
 // Mock database-manager
 vi.mock('../../src/database/database-manager', () => ({
   appDatabase: {
-    execute: vi.fn()
-  }
+    execute: vi.fn(),
+  },
 }));
 
 // Import after mocking
-import { runMigrations, rollbackMigration } from '../../src/database/migration-manager';
+import {
+  runMigrations,
+  rollbackMigration,
+} from '../../src/database/migration-manager';
 import { appDatabase } from '../../src/database/database-manager';
 
 describe('Migration Manager', () => {
-  const testMigrationsDir = join(process.cwd(), 'src', 'database', 'migrations');
+  const testMigrationsDir = join(
+    process.cwd(),
+    'src',
+    'database',
+    'migrations'
+  );
   const testSeedsDir = join(process.cwd(), 'src', 'database', 'seeds');
 
   // Helper function to create ResultSet mock
@@ -24,19 +32,19 @@ describe('Migration Manager', () => {
     columnTypes: [],
     rowsAffected: 0,
     lastInsertRowid: undefined,
-    toJSON: () => ({})
+    toJSON: () => ({}),
   });
 
   beforeEach(async () => {
     // Reset mocks and set default return values
     vi.mocked(appDatabase.execute).mockClear();
     vi.mocked(appDatabase.execute).mockResolvedValue(createMockResult());
-    
+
     // Create test directories
     if (!existsSync(testMigrationsDir)) {
       mkdirSync(testMigrationsDir, { recursive: true });
     }
-    
+
     // Mock console logs
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -50,7 +58,7 @@ describe('Migration Manager', () => {
     if (existsSync(testSeedsDir)) {
       rmSync(testSeedsDir, { recursive: true, force: true });
     }
-    
+
     vi.restoreAllMocks();
   });
 
@@ -72,27 +80,43 @@ describe('Migration Manager', () => {
 
       await runMigrations();
 
-      expect(console.log).toHaveBeenCalledWith('📊 Running 2 pending migrations...');
-      expect(console.log).toHaveBeenCalledWith('✅ Applied migration: 001_create_users.sql');
-      expect(console.log).toHaveBeenCalledWith('✅ Applied migration: 002_add_email.sql');
-      expect(console.log).toHaveBeenCalledWith('🎉 Database initialization completed');
+      expect(console.log).toHaveBeenCalledWith(
+        '📊 Running 2 pending migrations...'
+      );
+      expect(console.log).toHaveBeenCalledWith(
+        '✅ Applied migration: 001_create_users.sql'
+      );
+      expect(console.log).toHaveBeenCalledWith(
+        '✅ Applied migration: 002_add_email.sql'
+      );
+      expect(console.log).toHaveBeenCalledWith(
+        '🎉 Database initialization completed'
+      );
     });
 
     it('should handle empty migrations directory', async () => {
       await runMigrations();
 
-      expect(console.log).toHaveBeenCalledWith('📊 All migrations are up to date');
-      expect(console.log).toHaveBeenCalledWith('🎉 Database initialization completed');
+      expect(console.log).toHaveBeenCalledWith(
+        '📊 All migrations are up to date'
+      );
+      expect(console.log).toHaveBeenCalledWith(
+        '🎉 Database initialization completed'
+      );
     });
 
     it('should skip already applied migrations', async () => {
       // Configure mock to return applied migrations
       vi.mocked(appDatabase.execute)
         .mockResolvedValueOnce(createMockResult()) // Create table
-        .mockResolvedValueOnce(createMockResult([{ version: '001_create_users' }])) // Get applied migrations
+        .mockResolvedValueOnce(
+          createMockResult([{ version: '001_create_users' }])
+        ) // Get applied migrations
         .mockResolvedValueOnce(createMockResult()) // Execute migration
         .mockResolvedValueOnce(createMockResult()) // Add record
-        .mockResolvedValueOnce(createMockResult([{ version: '001_create_users' }])) // Get applied migrations (2nd time)
+        .mockResolvedValueOnce(
+          createMockResult([{ version: '001_create_users' }])
+        ) // Get applied migrations (2nd time)
         .mockResolvedValueOnce(createMockResult()) // Execute new migration
         .mockResolvedValueOnce(createMockResult()); // Add new record
 
@@ -117,8 +141,12 @@ describe('Migration Manager', () => {
       // Second execution
       await runMigrations();
 
-      expect(console.log).toHaveBeenCalledWith('✅ Applied migration: 001_create_users.sql');
-      expect(console.log).toHaveBeenCalledWith('✅ Applied migration: 002_add_email.sql');
+      expect(console.log).toHaveBeenCalledWith(
+        '✅ Applied migration: 001_create_users.sql'
+      );
+      expect(console.log).toHaveBeenCalledWith(
+        '✅ Applied migration: 002_add_email.sql'
+      );
     });
 
     it('should handle multiple SQL statements in one file', async () => {
@@ -131,8 +159,12 @@ describe('Migration Manager', () => {
 
       await runMigrations();
 
-      expect(console.log).toHaveBeenCalledWith('✅ Applied migration: 001_multi_statements.sql');
-      expect(console.log).toHaveBeenCalledWith('🎉 Database initialization completed');
+      expect(console.log).toHaveBeenCalledWith(
+        '✅ Applied migration: 001_multi_statements.sql'
+      );
+      expect(console.log).toHaveBeenCalledWith(
+        '🎉 Database initialization completed'
+      );
     });
 
     it('should run seeds after migrations', async () => {
@@ -153,7 +185,9 @@ describe('Migration Manager', () => {
 
       await runMigrations();
 
-      expect(console.log).toHaveBeenCalledWith('🌱 Applied seed: 001_seed_users.sql');
+      expect(console.log).toHaveBeenCalledWith(
+        '🌱 Applied seed: 001_seed_users.sql'
+      );
     });
 
     it('should handle migration errors', async () => {
@@ -169,7 +203,10 @@ describe('Migration Manager', () => {
       );
 
       await expect(runMigrations()).rejects.toThrow();
-      expect(console.error).toHaveBeenCalledWith('❌ Migration failed:', expect.any(Error));
+      expect(console.error).toHaveBeenCalledWith(
+        '❌ Migration failed:',
+        expect.any(Error)
+      );
     });
   });
 
@@ -180,7 +217,7 @@ describe('Migration Manager', () => {
         join(testMigrationsDir, '001_create_users.sql'),
         `CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);`
       );
-      
+
       writeFileSync(
         join(testMigrationsDir, '002_add_email.sql'),
         `ALTER TABLE users ADD COLUMN email TEXT;`
@@ -192,21 +229,30 @@ describe('Migration Manager', () => {
     it('should rollback specific migration version', async () => {
       await rollbackMigration('002_add_email');
 
-      expect(console.log).toHaveBeenCalledWith('🔄 Rolled back migration: 002_add_email');
+      expect(console.log).toHaveBeenCalledWith(
+        '🔄 Rolled back migration: 002_add_email'
+      );
     });
 
     it('should rollback latest migration when no version specified', async () => {
       await rollbackMigration();
 
-      expect(console.log).toHaveBeenCalledWith('🔄 Rolled back latest migration');
+      expect(console.log).toHaveBeenCalledWith(
+        '🔄 Rolled back latest migration'
+      );
     });
 
     it('should handle rollback errors', async () => {
       // Simulate a scenario where database connection is broken
-      vi.mocked(appDatabase.execute).mockRejectedValueOnce(new Error('Database error'));
+      vi.mocked(appDatabase.execute).mockRejectedValueOnce(
+        new Error('Database error')
+      );
 
       await expect(rollbackMigration('001_create_users')).rejects.toThrow();
-      expect(console.error).toHaveBeenCalledWith('❌ Rollback failed:', expect.any(Error));
+      expect(console.error).toHaveBeenCalledWith(
+        '❌ Rollback failed:',
+        expect.any(Error)
+      );
     });
   });
 
@@ -220,7 +266,9 @@ describe('Migration Manager', () => {
 
       await runMigrations();
 
-      expect(console.log).toHaveBeenCalledWith("✅ Applied migration: 001_test'; DROP TABLE users; --.sql");
+      expect(console.log).toHaveBeenCalledWith(
+        "✅ Applied migration: 001_test'; DROP TABLE users; --.sql"
+      );
     });
 
     it('should handle SQL with potential injection patterns', async () => {
@@ -233,7 +281,9 @@ describe('Migration Manager', () => {
 
       await runMigrations();
 
-      expect(console.log).toHaveBeenCalledWith('✅ Applied migration: 001_injection_test.sql');
+      expect(console.log).toHaveBeenCalledWith(
+        '✅ Applied migration: 001_injection_test.sql'
+      );
     });
   });
 
@@ -250,7 +300,10 @@ describe('Migration Manager', () => {
       );
 
       await expect(runMigrations()).rejects.toThrow('Database connection lost');
-      expect(console.error).toHaveBeenCalledWith('❌ Migration failed:', expect.any(Error));
+      expect(console.error).toHaveBeenCalledWith(
+        '❌ Migration failed:',
+        expect.any(Error)
+      );
     });
 
     it('should handle file access permission errors', async () => {
@@ -266,15 +319,22 @@ describe('Migration Manager', () => {
         'CREATE TABLE test (id INTEGER);'
       );
 
-      await expect(runMigrations()).rejects.toThrow('SQLITE_BUSY: database is locked');
-      expect(console.error).toHaveBeenCalledWith('❌ Migration failed:', expect.any(Error));
+      await expect(runMigrations()).rejects.toThrow(
+        'SQLITE_BUSY: database is locked'
+      );
+      expect(console.error).toHaveBeenCalledWith(
+        '❌ Migration failed:',
+        expect.any(Error)
+      );
     });
 
     it('should handle malformed SQL gracefully', async () => {
       vi.mocked(appDatabase.execute)
         .mockResolvedValueOnce(createMockResult()) // Create table
         .mockResolvedValueOnce(createMockResult()) // Get applied migrations
-        .mockRejectedValueOnce(new Error('SQLITE_ERROR: near "MALFORMED": syntax error'));
+        .mockRejectedValueOnce(
+          new Error('SQLITE_ERROR: near "MALFORMED": syntax error')
+        );
 
       writeFileSync(
         join(testMigrationsDir, '001_malformed.sql'),
@@ -282,7 +342,10 @@ describe('Migration Manager', () => {
       );
 
       await expect(runMigrations()).rejects.toThrow();
-      expect(console.error).toHaveBeenCalledWith('❌ Migration failed:', expect.any(Error));
+      expect(console.error).toHaveBeenCalledWith(
+        '❌ Migration failed:',
+        expect.any(Error)
+      );
     });
   });
 
@@ -303,13 +366,17 @@ describe('Migration Manager', () => {
       await runMigrations();
 
       // Verify that SQL string interpolation is called correctly
-      expect(appDatabase.execute).toHaveBeenCalledWith('INSERT INTO schema_migrations (version) VALUES (001_test)');
+      expect(appDatabase.execute).toHaveBeenCalledWith(
+        'INSERT INTO schema_migrations (version) VALUES (001_test)'
+      );
     });
 
     it('should handle rollback with string interpolation', async () => {
       await rollbackMigration('test_version');
 
-      expect(appDatabase.execute).toHaveBeenCalledWith('DELETE FROM schema_migrations WHERE version = test_version');
+      expect(appDatabase.execute).toHaveBeenCalledWith(
+        'DELETE FROM schema_migrations WHERE version = test_version'
+      );
     });
   });
 
@@ -320,7 +387,7 @@ describe('Migration Manager', () => {
         join(testMigrationsDir, '001_create_users.sql'),
         `CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);`
       );
-      
+
       writeFileSync(
         join(testMigrationsDir, '002_add_email.sql'),
         `ALTER TABLE users ADD COLUMN email TEXT;`
@@ -337,7 +404,9 @@ describe('Migration Manager', () => {
     it('should handle rollback of non-existent version gracefully', async () => {
       await rollbackMigration('999_nonexistent');
 
-      expect(console.log).toHaveBeenCalledWith('🔄 Rolled back migration: 999_nonexistent');
+      expect(console.log).toHaveBeenCalledWith(
+        '🔄 Rolled back migration: 999_nonexistent'
+      );
     });
 
     it('should handle rollback when no migrations exist', async () => {
@@ -346,14 +415,23 @@ describe('Migration Manager', () => {
 
       await rollbackMigration();
 
-      expect(console.log).toHaveBeenCalledWith('🔄 Rolled back latest migration');
+      expect(console.log).toHaveBeenCalledWith(
+        '🔄 Rolled back latest migration'
+      );
     });
 
     it('should handle database error during rollback', async () => {
-      vi.mocked(appDatabase.execute).mockRejectedValueOnce(new Error('Database locked'));
+      vi.mocked(appDatabase.execute).mockRejectedValueOnce(
+        new Error('Database locked')
+      );
 
-      await expect(rollbackMigration('002_add_email')).rejects.toThrow('Database locked');
-      expect(console.error).toHaveBeenCalledWith('❌ Rollback failed:', expect.any(Error));
+      await expect(rollbackMigration('002_add_email')).rejects.toThrow(
+        'Database locked'
+      );
+      expect(console.error).toHaveBeenCalledWith(
+        '❌ Rollback failed:',
+        expect.any(Error)
+      );
     });
   });
 
@@ -371,17 +449,19 @@ describe('Migration Manager', () => {
         join(testMigrationsDir, '001_success.sql'),
         'CREATE TABLE test1 (id INTEGER);'
       );
-      
-      writeFileSync(
-        join(testMigrationsDir, '002_failure.sql'),
-        'INVALID SQL;'
-      );
+
+      writeFileSync(join(testMigrationsDir, '002_failure.sql'), 'INVALID SQL;');
 
       await expect(runMigrations()).rejects.toThrow('Second migration failed');
-      
+
       // First migration is successful
-      expect(console.log).toHaveBeenCalledWith('✅ Applied migration: 001_success.sql');
-      expect(console.error).toHaveBeenCalledWith('❌ Migration failed:', expect.any(Error));
+      expect(console.log).toHaveBeenCalledWith(
+        '✅ Applied migration: 001_success.sql'
+      );
+      expect(console.error).toHaveBeenCalledWith(
+        '❌ Migration failed:',
+        expect.any(Error)
+      );
     });
 
     it('should handle concurrent migration attempts gracefully', async () => {
@@ -395,7 +475,9 @@ describe('Migration Manager', () => {
         'CREATE TABLE test (id INTEGER);'
       );
 
-      await expect(runMigrations()).rejects.toThrow('SQLITE_BUSY: database is locked');
+      await expect(runMigrations()).rejects.toThrow(
+        'SQLITE_BUSY: database is locked'
+      );
     });
   });
 
@@ -403,20 +485,20 @@ describe('Migration Manager', () => {
     it('should handle large number of migration files efficiently', async () => {
       // Create many migration files
       const migrationCount = 50;
-      
+
       // Mock setup (table creation + get applied + each migration execution x2)
       const mockCalls = [
         createMockResult(), // Create table
-        createMockResult()  // Get applied migrations
+        createMockResult(), // Get applied migrations
       ];
-      
+
       // Mock for each migration (execution + record)
       for (let i = 0; i < migrationCount; i++) {
         mockCalls.push(createMockResult()); // Execute migration
         mockCalls.push(createMockResult()); // Add record
       }
-      
-      vi.mocked(appDatabase.execute).mockImplementation(() => 
+
+      vi.mocked(appDatabase.execute).mockImplementation(() =>
         Promise.resolve(mockCalls.shift() || createMockResult())
       );
 
@@ -435,7 +517,9 @@ describe('Migration Manager', () => {
 
       // Check performance (rough guideline)
       expect(endTime - startTime).toBeLessThan(5000); // Within 5 seconds
-      expect(console.log).toHaveBeenCalledWith(`📊 Running ${migrationCount} pending migrations...`);
+      expect(console.log).toHaveBeenCalledWith(
+        `📊 Running ${migrationCount} pending migrations...`
+      );
     });
   });
 
@@ -465,7 +549,9 @@ describe('Migration Manager', () => {
 
       await runMigrations();
 
-      expect(console.log).toHaveBeenCalledWith('✅ Applied migration: 001_semicolon_in_string.sql');
+      expect(console.log).toHaveBeenCalledWith(
+        '✅ Applied migration: 001_semicolon_in_string.sql'
+      );
     });
   });
 
@@ -476,14 +562,20 @@ describe('Migration Manager', () => {
 
       await runMigrations();
 
-      expect(console.log).toHaveBeenCalledWith('Migrations directory not found, skipping migrations');
-      expect(console.log).toHaveBeenCalledWith('🎉 Database initialization completed');
+      expect(console.log).toHaveBeenCalledWith(
+        'Migrations directory not found, skipping migrations'
+      );
+      expect(console.log).toHaveBeenCalledWith(
+        '🎉 Database initialization completed'
+      );
     });
 
     it('should handle missing seeds directory gracefully', async () => {
       await runMigrations();
 
-      expect(console.log).toHaveBeenCalledWith('Seeds directory not found, skipping seeds');
+      expect(console.log).toHaveBeenCalledWith(
+        'Seeds directory not found, skipping seeds'
+      );
     });
 
     it('should handle empty SQL files', async () => {
@@ -491,7 +583,9 @@ describe('Migration Manager', () => {
 
       await runMigrations();
 
-      expect(console.log).toHaveBeenCalledWith('✅ Applied migration: 001_empty.sql');
+      expect(console.log).toHaveBeenCalledWith(
+        '✅ Applied migration: 001_empty.sql'
+      );
     });
 
     it('should handle SQL files with only comments and whitespace', async () => {
@@ -505,7 +599,9 @@ describe('Migration Manager', () => {
 
       await runMigrations();
 
-      expect(console.log).toHaveBeenCalledWith('✅ Applied migration: 001_comments_only.sql');
+      expect(console.log).toHaveBeenCalledWith(
+        '✅ Applied migration: 001_comments_only.sql'
+      );
     });
 
     it('should handle Unicode characters in SQL files', async () => {
@@ -521,15 +617,19 @@ describe('Migration Manager', () => {
 
       await runMigrations();
 
-      expect(console.log).toHaveBeenCalledWith('✅ Applied migration: 001_unicode.sql');
+      expect(console.log).toHaveBeenCalledWith(
+        '✅ Applied migration: 001_unicode.sql'
+      );
     });
 
     it('should handle very large migration files', async () => {
       // Create file with many INSERT statements
-      const largeSQL = Array.from({ length: 1000 }, (_, i) => 
-        `INSERT INTO test_table (id, data) VALUES (${i}, 'data_${i}');`
+      const largeSQL = Array.from(
+        { length: 1000 },
+        (_, i) =>
+          `INSERT INTO test_table (id, data) VALUES (${i}, 'data_${i}');`
       ).join('\n');
-      
+
       writeFileSync(
         join(testMigrationsDir, '001_large.sql'),
         `CREATE TABLE test_table (id INTEGER, data TEXT);\n${largeSQL}`
@@ -537,7 +637,9 @@ describe('Migration Manager', () => {
 
       await runMigrations();
 
-      expect(console.log).toHaveBeenCalledWith('✅ Applied migration: 001_large.sql');
+      expect(console.log).toHaveBeenCalledWith(
+        '✅ Applied migration: 001_large.sql'
+      );
     });
 
     it('should handle mixed line endings', async () => {
@@ -548,20 +650,21 @@ describe('Migration Manager', () => {
 
       await runMigrations();
 
-      expect(console.log).toHaveBeenCalledWith('✅ Applied migration: 001_mixed_endings.sql');
+      expect(console.log).toHaveBeenCalledWith(
+        '✅ Applied migration: 001_mixed_endings.sql'
+      );
     });
 
     it('should handle files with BOM (Byte Order Mark)', async () => {
       // Simulate file with UTF-8 BOM
       const bomSql = '\uFEFFCREATE TABLE bom_test (id INTEGER);';
-      writeFileSync(
-        join(testMigrationsDir, '001_bom_test.sql'),
-        bomSql
-      );
+      writeFileSync(join(testMigrationsDir, '001_bom_test.sql'), bomSql);
 
       await runMigrations();
 
-      expect(console.log).toHaveBeenCalledWith('✅ Applied migration: 001_bom_test.sql');
+      expect(console.log).toHaveBeenCalledWith(
+        '✅ Applied migration: 001_bom_test.sql'
+      );
     });
 
     it('should handle extremely long table and column names', async () => {
@@ -573,7 +676,9 @@ describe('Migration Manager', () => {
 
       await runMigrations();
 
-      expect(console.log).toHaveBeenCalledWith('✅ Applied migration: 001_long_names.sql');
+      expect(console.log).toHaveBeenCalledWith(
+        '✅ Applied migration: 001_long_names.sql'
+      );
     });
   });
 
@@ -588,25 +693,33 @@ describe('Migration Manager', () => {
 
       // Verify exact call sequence
       const calls = vi.mocked(appDatabase.execute).mock.calls;
-      
+
       // 1. Table creation
-      expect(calls[0][0]).toContain('CREATE TABLE IF NOT EXISTS schema_migrations');
-      
+      expect(calls[0][0]).toContain(
+        'CREATE TABLE IF NOT EXISTS schema_migrations'
+      );
+
       // 2. Get applied migrations
-      expect(calls[1][0]).toBe('SELECT version FROM schema_migrations ORDER BY version');
-      
+      expect(calls[1][0]).toBe(
+        'SELECT version FROM schema_migrations ORDER BY version'
+      );
+
       // 3. Execute migration
       expect(calls[2][0]).toBe('CREATE TABLE verify_test (id INTEGER)');
-      
+
       // 4. Add record (string interpolation)
-      expect(calls[3][0]).toBe('INSERT INTO schema_migrations (version) VALUES (001_verify_calls)');
+      expect(calls[3][0]).toBe(
+        'INSERT INTO schema_migrations (version) VALUES (001_verify_calls)'
+      );
     });
 
     it('should verify rollback database calls', async () => {
       await rollbackMigration('test_version');
 
       const calls = vi.mocked(appDatabase.execute).mock.calls;
-      expect(calls[0][0]).toBe('DELETE FROM schema_migrations WHERE version = test_version');
+      expect(calls[0][0]).toBe(
+        'DELETE FROM schema_migrations WHERE version = test_version'
+      );
     });
   });
 
@@ -617,7 +730,7 @@ describe('Migration Manager', () => {
         join(testMigrationsDir, '001_create_users.sql'),
         'CREATE TABLE users (id INTEGER);'
       );
-      
+
       writeFileSync(
         join(testMigrationsDir, '001_create_posts.sql'),
         'CREATE TABLE posts (id INTEGER);'
@@ -627,8 +740,12 @@ describe('Migration Manager', () => {
       await runMigrations();
 
       // First migration is applied, second is skipped as already applied
-      expect(console.log).toHaveBeenCalledWith('✅ Applied migration: 001_create_users.sql');
-      expect(console.log).toHaveBeenCalledWith('✅ Applied migration: 001_create_posts.sql');
+      expect(console.log).toHaveBeenCalledWith(
+        '✅ Applied migration: 001_create_users.sql'
+      );
+      expect(console.log).toHaveBeenCalledWith(
+        '✅ Applied migration: 001_create_posts.sql'
+      );
     });
 
     it('should handle file read permission errors gracefully', async () => {
@@ -636,15 +753,22 @@ describe('Migration Manager', () => {
       vi.mocked(appDatabase.execute)
         .mockResolvedValueOnce(createMockResult()) // Table creation succeeds
         .mockResolvedValueOnce(createMockResult()) // Get applied migrations succeeds
-        .mockRejectedValueOnce(new Error('EACCES: permission denied, open \'migration file\''));
+        .mockRejectedValueOnce(
+          new Error("EACCES: permission denied, open 'migration file'")
+        );
 
       writeFileSync(
         join(testMigrationsDir, '001_permission_test.sql'),
         'CREATE TABLE test (id INTEGER);'
       );
 
-      await expect(runMigrations()).rejects.toThrow('EACCES: permission denied');
-      expect(console.error).toHaveBeenCalledWith('❌ Migration failed:', expect.any(Error));
+      await expect(runMigrations()).rejects.toThrow(
+        'EACCES: permission denied'
+      );
+      expect(console.error).toHaveBeenCalledWith(
+        '❌ Migration failed:',
+        expect.any(Error)
+      );
     });
 
     it('should handle database connection pool exhaustion', async () => {
@@ -657,8 +781,13 @@ describe('Migration Manager', () => {
         'CREATE TABLE test (id INTEGER);'
       );
 
-      await expect(runMigrations()).rejects.toThrow('SQLITE_BUSY: too many connections');
-      expect(console.error).toHaveBeenCalledWith('❌ Migration failed:', expect.any(Error));
+      await expect(runMigrations()).rejects.toThrow(
+        'SQLITE_BUSY: too many connections'
+      );
+      expect(console.error).toHaveBeenCalledWith(
+        '❌ Migration failed:',
+        expect.any(Error)
+      );
     });
 
     it('should handle migration file with only whitespace and comments', async () => {
@@ -678,15 +807,21 @@ describe('Migration Manager', () => {
 
       await runMigrations();
 
-      expect(console.log).toHaveBeenCalledWith('✅ Applied migration: 001_whitespace_test.sql');
+      expect(console.log).toHaveBeenCalledWith(
+        '✅ Applied migration: 001_whitespace_test.sql'
+      );
     });
 
     it('should handle migration rollback for non-existent migration', async () => {
       // Attempt to rollback non-existent migration
       await rollbackMigration('999_nonexistent_migration');
 
-      expect(console.log).toHaveBeenCalledWith('🔄 Rolled back migration: 999_nonexistent_migration');
-      expect(appDatabase.execute).toHaveBeenCalledWith('DELETE FROM schema_migrations WHERE version = 999_nonexistent_migration');
+      expect(console.log).toHaveBeenCalledWith(
+        '🔄 Rolled back migration: 999_nonexistent_migration'
+      );
+      expect(appDatabase.execute).toHaveBeenCalledWith(
+        'DELETE FROM schema_migrations WHERE version = 999_nonexistent_migration'
+      );
     });
 
     it('should handle database timeout during migration', async () => {
@@ -700,8 +835,13 @@ describe('Migration Manager', () => {
         'CREATE TABLE test (id INTEGER);'
       );
 
-      await expect(runMigrations()).rejects.toThrow('SQLITE_BUSY: database is locked');
-      expect(console.error).toHaveBeenCalledWith('❌ Migration failed:', expect.any(Error));
+      await expect(runMigrations()).rejects.toThrow(
+        'SQLITE_BUSY: database is locked'
+      );
+      expect(console.error).toHaveBeenCalledWith(
+        '❌ Migration failed:',
+        expect.any(Error)
+      );
     });
 
     it('should handle migration with nested SQL transactions', async () => {
@@ -722,7 +862,9 @@ describe('Migration Manager', () => {
 
       await runMigrations();
 
-      expect(console.log).toHaveBeenCalledWith('✅ Applied migration: 001_transaction_test.sql');
+      expect(console.log).toHaveBeenCalledWith(
+        '✅ Applied migration: 001_transaction_test.sql'
+      );
       // Verify that each statement within the transaction is executed
       expect(appDatabase.execute).toHaveBeenCalledWith('BEGIN TRANSACTION');
       expect(appDatabase.execute).toHaveBeenCalledWith('COMMIT');
@@ -748,7 +890,9 @@ describe('Migration Manager', () => {
 
       await runMigrations();
 
-      expect(console.log).toHaveBeenCalledWith('✅ Applied migration: 001_special_syntax.sql');
+      expect(console.log).toHaveBeenCalledWith(
+        '✅ Applied migration: 001_special_syntax.sql'
+      );
     });
   });
 });

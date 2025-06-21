@@ -28,25 +28,37 @@ describe('DatabaseManager', () => {
   beforeEach(async () => {
     // Reset mocks
     vi.clearAllMocks();
-    
+
     // Reset singleton instance
     await DatabaseManager.resetInstance();
-    
+
     // Setup mock client with SQLite PRAGMA support
     mockExecute
-      .mockResolvedValueOnce({ rows: [{ journal_mode: 'wal' }], columns: ['journal_mode'] }) // PRAGMA journal_mode = WAL
-      .mockResolvedValueOnce({ rows: [{ synchronous: 1 }], columns: ['synchronous'] }) // PRAGMA synchronous = NORMAL
-      .mockResolvedValueOnce({ rows: [{ cache_size: -64000 }], columns: ['cache_size'] }) // PRAGMA cache_size = -64000
-      .mockResolvedValueOnce({ rows: [{ temp_store: 2 }], columns: ['temp_store'] }) // PRAGMA temp_store = MEMORY
+      .mockResolvedValueOnce({
+        rows: [{ journal_mode: 'wal' }],
+        columns: ['journal_mode'],
+      }) // PRAGMA journal_mode = WAL
+      .mockResolvedValueOnce({
+        rows: [{ synchronous: 1 }],
+        columns: ['synchronous'],
+      }) // PRAGMA synchronous = NORMAL
+      .mockResolvedValueOnce({
+        rows: [{ cache_size: -64000 }],
+        columns: ['cache_size'],
+      }) // PRAGMA cache_size = -64000
+      .mockResolvedValueOnce({
+        rows: [{ temp_store: 2 }],
+        columns: ['temp_store'],
+      }) // PRAGMA temp_store = MEMORY
       .mockResolvedValueOnce({ rows: [{ '1': 1 }], columns: ['1'] }); // SELECT 1 (verifyConnection)
-    
+
     mockCreateClient.mockReturnValue({ execute: mockExecute, close: vi.fn() });
     mockRunMigrations.mockResolvedValue();
-    
+
     // Mock console methods
     vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.spyOn(console, 'log').mockImplementation(() => {});
-    
+
     // Reset environment variables
     process.env = { ...originalEnv };
     delete process.env.DATABASE_URL;
@@ -56,7 +68,7 @@ describe('DatabaseManager', () => {
     // Restore environment variables
     process.env = originalEnv;
     vi.restoreAllMocks();
-    
+
     // Reset singleton instance
     await DatabaseManager.resetInstance();
   });
@@ -65,7 +77,7 @@ describe('DatabaseManager', () => {
     it('should always return the same instance from getInstance()', () => {
       const instance1 = DatabaseManager.getInstance();
       const instance2 = DatabaseManager.getInstance();
-      
+
       expect(instance1).toBe(instance2);
     });
 
@@ -73,7 +85,7 @@ describe('DatabaseManager', () => {
       const instance1 = DatabaseManager.getInstance();
       await DatabaseManager.resetInstance();
       const instance2 = DatabaseManager.getInstance();
-      
+
       expect(instance1).not.toBe(instance2);
     });
   });
@@ -81,19 +93,19 @@ describe('DatabaseManager', () => {
   describe('Database Connection', () => {
     it('should use DATABASE_URL environment variable when set', () => {
       process.env.DATABASE_URL = 'file:test.db';
-      
+
       DatabaseManager.getInstance();
-      
+
       expect(mockCreateClient).toHaveBeenCalledWith({
-        url: 'file:test.db'
+        url: 'file:test.db',
       });
     });
 
     it('should use default value when DATABASE_URL environment variable is not set', () => {
       DatabaseManager.getInstance();
-      
+
       expect(mockCreateClient).toHaveBeenCalledWith({
-        url: 'file:app.db'
+        url: 'file:app.db',
       });
     });
   });
@@ -102,35 +114,47 @@ describe('DatabaseManager', () => {
     it('should run migrations on first ensureInitialized() call', async () => {
       // Setup fresh mocks for this test
       mockExecute
-        .mockResolvedValueOnce({ rows: [{ journal_mode: 'wal' }], columns: ['journal_mode'] }) // PRAGMA journal_mode = WAL
-        .mockResolvedValueOnce({ rows: [{ synchronous: 1 }], columns: ['synchronous'] }) // PRAGMA synchronous = NORMAL
-        .mockResolvedValueOnce({ rows: [{ cache_size: -64000 }], columns: ['cache_size'] }) // PRAGMA cache_size = -64000
-        .mockResolvedValueOnce({ rows: [{ temp_store: 2 }], columns: ['temp_store'] }) // PRAGMA temp_store = MEMORY
+        .mockResolvedValueOnce({
+          rows: [{ journal_mode: 'wal' }],
+          columns: ['journal_mode'],
+        }) // PRAGMA journal_mode = WAL
+        .mockResolvedValueOnce({
+          rows: [{ synchronous: 1 }],
+          columns: ['synchronous'],
+        }) // PRAGMA synchronous = NORMAL
+        .mockResolvedValueOnce({
+          rows: [{ cache_size: -64000 }],
+          columns: ['cache_size'],
+        }) // PRAGMA cache_size = -64000
+        .mockResolvedValueOnce({
+          rows: [{ temp_store: 2 }],
+          columns: ['temp_store'],
+        }) // PRAGMA temp_store = MEMORY
         .mockResolvedValueOnce({ rows: [{ '1': 1 }], columns: ['1'] }); // SELECT 1 (verifyConnection)
-      
+
       const manager = DatabaseManager.getInstance();
-      
+
       await manager.ensureInitialized();
-      
+
       expect(mockRunMigrations).toHaveBeenCalledTimes(1);
     });
 
     it('should not run migrations on subsequent ensureInitialized() calls', async () => {
       const manager = DatabaseManager.getInstance();
-      
+
       await manager.ensureInitialized();
       await manager.ensureInitialized();
       await manager.ensureInitialized();
-      
+
       expect(mockRunMigrations).toHaveBeenCalledTimes(1);
     });
 
     it('should output appropriate error message when migration fails', async () => {
       const error = new Error('Migration failed');
       mockRunMigrations.mockRejectedValueOnce(error);
-      
+
       const manager = DatabaseManager.getInstance();
-      
+
       await expect(manager.ensureInitialized()).rejects.toThrow(
         'Database initialization failed: Migration failed'
       );
@@ -141,9 +165,9 @@ describe('DatabaseManager', () => {
 
     it('should handle non-Error objects appropriately', async () => {
       mockRunMigrations.mockRejectedValueOnce('String error');
-      
+
       const manager = DatabaseManager.getInstance();
-      
+
       await expect(manager.ensureInitialized()).rejects.toThrow(
         'Database initialization failed: String error'
       );
@@ -151,9 +175,9 @@ describe('DatabaseManager', () => {
 
     it('should handle null or undefined exceptions appropriately', async () => {
       mockRunMigrations.mockRejectedValueOnce(null);
-      
+
       const manager = DatabaseManager.getInstance();
-      
+
       await expect(manager.ensureInitialized()).rejects.toThrow(
         'Database initialization failed: null'
       );
@@ -164,18 +188,30 @@ describe('DatabaseManager', () => {
     it('should automatically call ensureInitialized() when execute() is called', async () => {
       // Setup fresh mocks for this test
       mockExecute
-        .mockResolvedValueOnce({ rows: [{ journal_mode: 'wal' }], columns: ['journal_mode'] }) // PRAGMA journal_mode = WAL
-        .mockResolvedValueOnce({ rows: [{ synchronous: 1 }], columns: ['synchronous'] }) // PRAGMA synchronous = NORMAL
-        .mockResolvedValueOnce({ rows: [{ cache_size: -64000 }], columns: ['cache_size'] }) // PRAGMA cache_size = -64000
-        .mockResolvedValueOnce({ rows: [{ temp_store: 2 }], columns: ['temp_store'] }) // PRAGMA temp_store = MEMORY
+        .mockResolvedValueOnce({
+          rows: [{ journal_mode: 'wal' }],
+          columns: ['journal_mode'],
+        }) // PRAGMA journal_mode = WAL
+        .mockResolvedValueOnce({
+          rows: [{ synchronous: 1 }],
+          columns: ['synchronous'],
+        }) // PRAGMA synchronous = NORMAL
+        .mockResolvedValueOnce({
+          rows: [{ cache_size: -64000 }],
+          columns: ['cache_size'],
+        }) // PRAGMA cache_size = -64000
+        .mockResolvedValueOnce({
+          rows: [{ temp_store: 2 }],
+          columns: ['temp_store'],
+        }) // PRAGMA temp_store = MEMORY
         .mockResolvedValueOnce({ rows: [{ '1': 1 }], columns: ['1'] }) // SELECT 1 (verifyConnection)
         .mockResolvedValueOnce({ rows: [], columns: [] }); // The actual execute call
-      
+
       const manager = DatabaseManager.getInstance();
       const spy = vi.spyOn(manager, 'ensureInitialized');
-      
+
       await manager.execute('SELECT 1');
-      
+
       expect(spy).toHaveBeenCalledTimes(1);
       expect(mockExecute).toHaveBeenLastCalledWith('SELECT 1');
     });
@@ -184,14 +220,14 @@ describe('DatabaseManager', () => {
       // Ensure fresh instance and reset mocks
       await DatabaseManager.resetInstance();
       vi.clearAllMocks();
-      
+
       const mockResult = {
         rows: [{ id: 1, name: 'test' }],
         columns: ['id', 'name'],
         rowsAffected: 1,
-        lastInsertRowid: 1
+        lastInsertRowid: 1,
       };
-      
+
       // Mock all initialization calls
       mockExecute.mockImplementation(async (sql: string) => {
         if (sql.includes('PRAGMA journal_mode')) {
@@ -212,20 +248,20 @@ describe('DatabaseManager', () => {
         // Return the actual result for the test query
         return mockResult;
       });
-      
+
       const manager = DatabaseManager.getInstance();
-      
+
       const result = await manager.execute('SELECT * FROM users');
-      
+
       expect(result).toEqual(mockResult);
     });
 
     it('should properly propagate errors from execute()', async () => {
       const manager = DatabaseManager.getInstance();
       const dbError = new Error('SQL execution failed');
-      
+
       mockExecute.mockRejectedValueOnce(dbError);
-      
+
       await expect(manager.execute('INVALID SQL')).rejects.toThrow(
         'SQL execution failed'
       );
@@ -236,7 +272,7 @@ describe('DatabaseManager', () => {
     it('should return client instance from getClient()', () => {
       const manager = DatabaseManager.getInstance();
       const client = manager.getClient();
-      
+
       expect(client).toBeDefined();
       expect(client.execute).toBe(mockExecute);
     });
@@ -246,13 +282,13 @@ describe('DatabaseManager', () => {
     it('should share initialization state across different instances', async () => {
       const manager1 = DatabaseManager.getInstance();
       const manager2 = DatabaseManager.getInstance();
-      
+
       // Initialize with first instance
       await manager1.ensureInitialized();
-      
+
       // Second instance should skip initialization
       await manager2.ensureInitialized();
-      
+
       expect(mockRunMigrations).toHaveBeenCalledTimes(1);
     });
   });
@@ -260,15 +296,15 @@ describe('DatabaseManager', () => {
   describe('Retry After Initialization Failure', () => {
     it('should be able to retry initialization after failure', async () => {
       const manager = DatabaseManager.getInstance();
-      
+
       // First attempt fails
       mockRunMigrations.mockRejectedValueOnce(new Error('First failure'));
       await expect(manager.ensureInitialized()).rejects.toThrow();
-      
+
       // Second attempt succeeds
       mockRunMigrations.mockResolvedValueOnce();
       await expect(manager.ensureInitialized()).resolves.not.toThrow();
-      
+
       expect(mockRunMigrations).toHaveBeenCalledTimes(2);
     });
   });
@@ -277,7 +313,7 @@ describe('DatabaseManager', () => {
     it('should correctly set WAL mode', async () => {
       const manager = DatabaseManager.getInstance();
       await manager.ensureInitialized();
-      
+
       // Check if PRAGMA journal_mode = WAL was executed
       expect(mockExecute).toHaveBeenCalledWith('PRAGMA journal_mode = WAL;');
     });
@@ -285,7 +321,7 @@ describe('DatabaseManager', () => {
     it('should correctly set synchronous mode', async () => {
       const manager = DatabaseManager.getInstance();
       await manager.ensureInitialized();
-      
+
       // Check if PRAGMA synchronous = NORMAL was executed
       expect(mockExecute).toHaveBeenCalledWith('PRAGMA synchronous = NORMAL;');
     });
@@ -293,7 +329,7 @@ describe('DatabaseManager', () => {
     it('should correctly set cache size', async () => {
       const manager = DatabaseManager.getInstance();
       await manager.ensureInitialized();
-      
+
       // Check if PRAGMA cache_size = -64000 was executed
       expect(mockExecute).toHaveBeenCalledWith('PRAGMA cache_size = -64000;');
     });
@@ -301,7 +337,7 @@ describe('DatabaseManager', () => {
     it('should set temporary storage to memory', async () => {
       const manager = DatabaseManager.getInstance();
       await manager.ensureInitialized();
-      
+
       // Check if PRAGMA temp_store = MEMORY was executed
       expect(mockExecute).toHaveBeenCalledWith('PRAGMA temp_store = MEMORY;');
     });
@@ -309,7 +345,7 @@ describe('DatabaseManager', () => {
     it('should execute connection verification query', async () => {
       const manager = DatabaseManager.getInstance();
       await manager.ensureInitialized();
-      
+
       // Check if SELECT 1 was executed
       expect(mockExecute).toHaveBeenCalledWith('SELECT 1');
     });
