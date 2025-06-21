@@ -1,0 +1,46 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit checks..."
+
+# Type check
+echo "📝 Type checking..."
+npm run typecheck
+if [ $? -ne 0 ]; then
+  echo "❌ Type check failed"
+  exit 1
+fi
+
+# Lint
+echo "🧹 Linting..."
+npm run lint
+if [ $? -ne 0 ]; then
+  echo "❌ Lint failed"
+  exit 1
+fi
+
+# Format check
+echo "🎨 Format checking..."
+npm run format:check
+if [ $? -ne 0 ]; then
+  echo "❌ Format check failed"
+  exit 1
+fi
+
+# Build
+echo "🔨 Building..."
+npm run build
+if [ $? -ne 0 ]; then
+  echo "❌ Build failed"
+  exit 1
+fi
+
+# Test
+echo "🧪 Testing..."
+npm run test
+if [ $? -ne 0 ]; then
+  echo "❌ Tests failed"
+  exit 1
+fi
+
+echo "✅ All checks passed!"

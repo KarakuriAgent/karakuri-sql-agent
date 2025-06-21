@@ -15,7 +15,7 @@ jobs:
           PERMISSION=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/$REPO/collaborators/$PR_AUTHOR/permission" \
             | jq -r '.permission')
-          
+
           if [ "$PERMISSION" == "admin" ]; then
             echo "is_admin=true" >> $GITHUB_OUTPUT
             echo "PR author $PR_AUTHOR is an admin"
