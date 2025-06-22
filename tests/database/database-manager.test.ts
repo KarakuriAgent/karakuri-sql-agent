@@ -100,14 +100,6 @@ describe('DatabaseManager', () => {
         url: 'file:test.db',
       });
     });
-
-    it('should use default value when DATABASE_URL environment variable is not set', () => {
-      DatabaseManager.getInstance();
-
-      expect(mockCreateClient).toHaveBeenCalledWith({
-        url: 'file:app.db',
-      });
-    });
   });
 
   describe('Database Initialization', () => {

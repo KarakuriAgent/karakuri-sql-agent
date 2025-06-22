@@ -7,6 +7,7 @@ export class DatabaseManager {
   private isInitialized = false;
   private initializationPromise: Promise<void> | null = null;
   private isConnected = false;
+  private isInitializing = false;
 
   private constructor() {
     this.client = createClient({
@@ -22,7 +23,7 @@ export class DatabaseManager {
   }
 
   private getDatabaseUrl(): string {
-    return process.env.DATABASE_URL || 'file:app.db';
+    return process.env.DATABASE_URL || 'file:../../database/app.db';
   }
 
   async ensureInitialized() {
@@ -39,6 +40,7 @@ export class DatabaseManager {
   }
 
   private async performInitialization(): Promise<void> {
+    this.isInitializing = true;
     try {
       // Enable SQLite WAL mode for performance improvement
       await this.client.execute('PRAGMA journal_mode = WAL;');
@@ -49,7 +51,8 @@ export class DatabaseManager {
       // Verify connection status
       await this.verifyConnection();
 
-      await runMigrations();
+      await runMigrations(this);
+
       this.isInitialized = true;
       this.isConnected = true;
       console.log('📊 Database initialized successfully with WAL mode');
@@ -59,6 +62,8 @@ export class DatabaseManager {
       const errorMessage = `❌ Database initialization failed: ${error instanceof Error ? error.message : String(error)}`;
       console.error(errorMessage);
       throw new Error(errorMessage);
+    } finally {
+      this.isInitializing = false;
     }
   }
 
@@ -68,7 +73,7 @@ export class DatabaseManager {
 
   async close(): Promise<void> {
     try {
-      await this.client.close();
+      this.client.close();
       this.isConnected = false;
       console.log('📊 Database connection closed');
     } catch (error) {
@@ -78,7 +83,10 @@ export class DatabaseManager {
 
   async execute(sql: string): Promise<ResultSet> {
     try {
-      await this.ensureInitialized();
+      // Skip initialization check if we're already initializing
+      if (!this.isInitializing) {
+        await this.ensureInitialized();
+      }
       return await this.client.execute(sql);
     } catch (error) {
       console.error('❌ SQL execution failed:', error);
@@ -145,6 +153,22 @@ export class DatabaseManager {
       console.error('❌ Database optimization failed:', error);
       throw error;
     }
+  }
+
+  // Get database schema
+  async getSchema(): Promise<string> {
+    await this.ensureInitialized();
+
+    const result = await this.client.execute(`
+      SELECT sql FROM sqlite_master 
+      WHERE type IN ('table', 'index') 
+      AND name NOT LIKE 'sqlite_%' 
+      AND name != 'schema_migrations'
+      ORDER BY type, name
+    `);
+
+    const schemas = result.rows.map(row => row.sql).filter(sql => sql);
+    return schemas.join(';\n\n') + ';';
   }
 
   // Reset function for testing
