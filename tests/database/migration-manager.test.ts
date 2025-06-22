@@ -906,4 +906,202 @@ describe('Migration Manager', () => {
       );
     });
   });
+
+  describe('Seed Tracking System', () => {
+    beforeEach(() => {
+      // Create test seeds directory
+      if (!existsSync(testSeedsDir)) {
+        mkdirSync(testSeedsDir, { recursive: true });
+      }
+    });
+
+    it('should create seed_applications table on first run', async () => {
+      vi.mocked(appDatabase.execute)
+        .mockResolvedValueOnce(createMockResult()) // Create schema_migrations table
+        .mockResolvedValueOnce(createMockResult()) // Get applied migrations
+        .mockResolvedValueOnce(createMockResult()) // Create seed_applications table
+        .mockResolvedValueOnce(createMockResult()); // Get applied seeds
+
+      writeFileSync(
+        join(testSeedsDir, '001_test_seed.sql'),
+        "INSERT INTO users (name) VALUES ('Test User');"
+      );
+
+      await runMigrations(appDatabase as any);
+
+      expect(vi.mocked(appDatabase.execute)).toHaveBeenCalledWith(
+        expect.stringContaining('CREATE TABLE IF NOT EXISTS seed_applications')
+      );
+    });
+
+    it('should track applied seeds in seed_applications table', async () => {
+      vi.mocked(appDatabase.execute)
+        .mockResolvedValueOnce(createMockResult()) // Create schema_migrations table
+        .mockResolvedValueOnce(createMockResult()) // Get applied migrations
+        .mockResolvedValueOnce(createMockResult()) // Create seed_applications table
+        .mockResolvedValueOnce(createMockResult()) // Get applied seeds (empty)
+        .mockResolvedValueOnce(createMockResult()) // Execute seed
+        .mockResolvedValueOnce(createMockResult()); // Mark seed as applied
+
+      writeFileSync(
+        join(testSeedsDir, '001_test_seed.sql'),
+        "INSERT INTO users (name) VALUES ('Test User');"
+      );
+
+      await runMigrations(appDatabase as any);
+
+      expect(vi.mocked(appDatabase.execute)).toHaveBeenCalledWith(
+        expect.stringContaining(
+          "INSERT OR IGNORE INTO seed_applications (filename) VALUES ('001_test_seed.sql')"
+        )
+      );
+    });
+
+    it('should skip already applied seeds', async () => {
+      // Mock that seed is already applied
+      vi.mocked(appDatabase.execute)
+        .mockResolvedValueOnce(createMockResult()) // Create schema_migrations table
+        .mockResolvedValueOnce(createMockResult()) // Get applied migrations
+        .mockResolvedValueOnce(createMockResult()) // Create seed_applications table
+        .mockResolvedValueOnce(
+          createMockResult([{ filename: '001_test_seed.sql' }])
+        ); // Get applied seeds
+
+      writeFileSync(
+        join(testSeedsDir, '001_test_seed.sql'),
+        "INSERT INTO users (name) VALUES ('Test User');"
+      );
+
+      await runMigrations(appDatabase as any);
+
+      expect(console.log).toHaveBeenCalledWith(
+        '🌱 All seeds already applied, skipping seed execution'
+      );
+    });
+
+    it('should apply only pending seeds when some are already applied', async () => {
+      // Mock that first seed is applied, second is not
+      vi.mocked(appDatabase.execute)
+        .mockResolvedValueOnce(createMockResult()) // Create schema_migrations table
+        .mockResolvedValueOnce(createMockResult()) // Get applied migrations
+        .mockResolvedValueOnce(createMockResult()) // Create seed_applications table
+        .mockResolvedValueOnce(
+          createMockResult([{ filename: '001_first_seed.sql' }])
+        ) // Get applied seeds
+        .mockResolvedValueOnce(createMockResult()) // Execute second seed
+        .mockResolvedValueOnce(createMockResult()); // Mark second seed as applied
+
+      writeFileSync(
+        join(testSeedsDir, '001_first_seed.sql'),
+        "INSERT INTO users (name) VALUES ('First User');"
+      );
+      writeFileSync(
+        join(testSeedsDir, '002_second_seed.sql'),
+        "INSERT INTO users (name) VALUES ('Second User');"
+      );
+
+      await runMigrations(appDatabase as any);
+
+      expect(console.log).toHaveBeenCalledWith('🌱 Applying 1 seed files...');
+      expect(console.log).toHaveBeenCalledWith(
+        '🌱 Applied seed: 002_second_seed.sql'
+      );
+    });
+
+    it('should handle SQL injection attempts in seed filenames', async () => {
+      const maliciousFilename = "'; DROP TABLE seed_applications; --";
+
+      vi.mocked(appDatabase.execute)
+        .mockResolvedValueOnce(createMockResult()) // Create schema_migrations table
+        .mockResolvedValueOnce(createMockResult()) // Get applied migrations
+        .mockResolvedValueOnce(createMockResult()) // Create seed_applications table
+        .mockResolvedValueOnce(createMockResult()) // Get applied seeds (empty)
+        .mockResolvedValueOnce(createMockResult()) // Execute seed
+        .mockResolvedValueOnce(createMockResult()); // Mark seed as applied
+
+      writeFileSync(
+        join(testSeedsDir, maliciousFilename + '.sql'),
+        "INSERT INTO users (name) VALUES ('Test User');"
+      );
+
+      await runMigrations(appDatabase as any);
+
+      // Verify that the filename is properly escaped (last call should be the insert)
+      const calls = vi.mocked(appDatabase.execute).mock.calls;
+      const lastCall = calls[calls.length - 1][0];
+      expect(lastCall).toContain("'''; DROP TABLE seed_applications; --.sql'");
+    });
+
+    it('should handle multiple seeds being applied in correct order', async () => {
+      vi.mocked(appDatabase.execute)
+        .mockResolvedValueOnce(createMockResult()) // Create schema_migrations table
+        .mockResolvedValueOnce(createMockResult()) // Get applied migrations
+        .mockResolvedValueOnce(createMockResult()) // Create seed_applications table
+        .mockResolvedValueOnce(createMockResult()) // Get applied seeds (empty)
+        .mockResolvedValueOnce(createMockResult()) // Execute first seed
+        .mockResolvedValueOnce(createMockResult()) // Mark first seed as applied
+        .mockResolvedValueOnce(createMockResult()) // Execute second seed
+        .mockResolvedValueOnce(createMockResult()); // Mark second seed as applied
+
+      writeFileSync(
+        join(testSeedsDir, '002_second.sql'),
+        "INSERT INTO users (name) VALUES ('Second');"
+      );
+      writeFileSync(
+        join(testSeedsDir, '001_first.sql'),
+        "INSERT INTO users (name) VALUES ('First');"
+      );
+
+      await runMigrations(appDatabase as any);
+
+      expect(console.log).toHaveBeenCalledWith('🌱 Applying 2 seed files...');
+      expect(console.log).toHaveBeenCalledWith(
+        '🌱 Applied seed: 001_first.sql'
+      );
+      expect(console.log).toHaveBeenCalledWith(
+        '🌱 Applied seed: 002_second.sql'
+      );
+    });
+
+    it('should handle database errors during seed tracking table creation', async () => {
+      vi.mocked(appDatabase.execute)
+        .mockResolvedValueOnce(createMockResult()) // Create schema_migrations table
+        .mockResolvedValueOnce(createMockResult()) // Get applied migrations
+        .mockRejectedValueOnce(
+          new Error('Failed to create seed_applications table')
+        ); // Fail to create seed table
+
+      writeFileSync(
+        join(testSeedsDir, '001_test_seed.sql'),
+        "INSERT INTO users (name) VALUES ('Test User');"
+      );
+
+      // runSeeds catches all errors and logs them, so runMigrations should not throw
+      await runMigrations(appDatabase as any);
+
+      expect(console.log).toHaveBeenCalledWith(
+        'Seeds directory not found, skipping seeds'
+      );
+    });
+
+    it('should handle database errors when querying applied seeds', async () => {
+      vi.mocked(appDatabase.execute)
+        .mockResolvedValueOnce(createMockResult()) // Create schema_migrations table
+        .mockResolvedValueOnce(createMockResult()) // Get applied migrations
+        .mockResolvedValueOnce(createMockResult()) // Create seed_applications table
+        .mockRejectedValueOnce(new Error('Failed to query applied seeds')); // Fail to get applied seeds
+
+      writeFileSync(
+        join(testSeedsDir, '001_test_seed.sql'),
+        "INSERT INTO users (name) VALUES ('Test User');"
+      );
+
+      // runSeeds catches all errors and logs them, so runMigrations should not throw
+      await runMigrations(appDatabase as any);
+
+      expect(console.log).toHaveBeenCalledWith(
+        'Seeds directory not found, skipping seeds'
+      );
+    });
+  });
 });

@@ -17,6 +17,41 @@ const createMigrationTable = async (database: DatabaseManager) => {
   }
 };
 
+// Table to manage seed application status
+const createSeedTrackingTable = async (database: DatabaseManager) => {
+  try {
+    await database.execute(`
+      CREATE TABLE IF NOT EXISTS seed_applications (
+        filename TEXT PRIMARY KEY,
+        applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+  } catch (error) {
+    console.error('❌ Failed to create seed_applications table:', error);
+    throw error;
+  }
+};
+
+// Get applied seed files
+const getAppliedSeeds = async (
+  database: DatabaseManager
+): Promise<string[]> => {
+  const result = await database.execute(
+    'SELECT filename FROM seed_applications ORDER BY filename'
+  );
+  return result.rows.map(row => row.filename as string);
+};
+
+// Mark seed as applied
+const markSeedAsApplied = async (
+  database: DatabaseManager,
+  filename: string
+) => {
+  await database.execute(
+    `INSERT OR IGNORE INTO seed_applications (filename) VALUES ('${filename.replace(/'/g, "''")}')`
+  );
+};
+
 // Get applied migrations
 const getAppliedMigrations = async (
   database: DatabaseManager
@@ -80,22 +115,20 @@ const runSeeds = async (database: DatabaseManager) => {
       .filter(file => file.endsWith('.sql'))
       .sort();
 
-    // Check if seeds have already been applied by looking for data in tables
-    try {
-      const result = await database.execute(
-        'SELECT COUNT(*) as count FROM users'
-      );
-      const userCount = result.rows[0]?.count as number;
-      if (userCount > 0) {
-        console.log('🌱 Seeds already applied, skipping seed execution');
-        return;
-      }
-    } catch {
-      console.log('🌱 Could not check existing data, proceeding with seeds');
+    // Create seed tracking table if it doesn't exist
+    await createSeedTrackingTable(database);
+
+    // Get already applied seeds
+    const appliedSeeds = await getAppliedSeeds(database);
+    const pendingSeeds = seedFiles.filter(file => !appliedSeeds.includes(file));
+
+    if (pendingSeeds.length === 0) {
+      console.log('🌱 All seeds already applied, skipping seed execution');
+      return;
     }
 
-    console.log(`🌱 Applying ${seedFiles.length} seed files...`);
-    for (const seedFile of seedFiles) {
+    console.log(`🌱 Applying ${pendingSeeds.length} seed files...`);
+    for (const seedFile of pendingSeeds) {
       const seedPath = join(seedsDir, seedFile);
       const sql = readFileSync(seedPath, 'utf-8');
 
@@ -114,6 +147,7 @@ const runSeeds = async (database: DatabaseManager) => {
         }
       }
 
+      await markSeedAsApplied(database, seedFile);
       console.log(`🌱 Applied seed: ${seedFile}`);
     }
   } catch {
