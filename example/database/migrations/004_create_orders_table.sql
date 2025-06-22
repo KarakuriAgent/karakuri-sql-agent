@@ -1,0 +1,12 @@
+-- 注文テーブル
+CREATE TABLE IF NOT EXISTS orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  product_id INTEGER NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  quantity INTEGER NOT NULL DEFAULT 1,
+  order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+  status TEXT DEFAULT 'pending',
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  FOREIGN KEY (product_id) REFERENCES products(id)
+);

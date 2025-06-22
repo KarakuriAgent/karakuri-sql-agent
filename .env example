@@ -1,1 +1,4 @@
 OPENAI_API_KEY=your-api-key
+DATABASE_MIGRATIONS_PATH='../../example/database/migrations'
+DATABASE_SEEDS_PATH='../../example/database/seeds'
+DATABASE_URL='file:../../example/database/app.db'
