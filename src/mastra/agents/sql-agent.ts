@@ -15,6 +15,7 @@ export const sqlAgent = new Agent({
       await appDatabase.ensureInitialized();
     } catch (error) {
       console.error('❌ SQL Agent: Database initialization failed:', error);
+      throw error;
     }
 
     // Get schema from database
