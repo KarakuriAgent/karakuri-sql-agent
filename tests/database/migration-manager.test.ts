@@ -55,25 +55,24 @@ describe('Migration Manager', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
-  afterEach(() => {
-    // Remove test directories with retry logic
-    const removeDirectory = (dir: string) => {
+  afterEach(async () => {
+    // Remove test directories with retry logic using promise-based approach
+    const removeDirectory = async (dir: string): Promise<void> => {
       if (existsSync(dir)) {
         try {
           rmSync(dir, { recursive: true, force: true });
         } catch (error) {
-          // Retry once on Windows ENOTEMPTY error
+          // Retry once on Windows ENOTEMPTY error with promise-based delay
           if (error instanceof Error && error.message.includes('ENOTEMPTY')) {
-            setTimeout(() => {
-              try {
-                rmSync(dir, { recursive: true, force: true });
-              } catch (retryError) {
-                console.warn(
-                  `Failed to remove test directory ${dir}:`,
-                  retryError
-                );
-              }
-            }, 100);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            try {
+              rmSync(dir, { recursive: true, force: true });
+            } catch (retryError) {
+              console.warn(
+                `Failed to remove test directory ${dir}:`,
+                retryError
+              );
+            }
           } else {
             console.warn(`Failed to remove test directory ${dir}:`, error);
           }
@@ -81,8 +80,8 @@ describe('Migration Manager', () => {
       }
     };
 
-    removeDirectory(testMigrationsDir);
-    removeDirectory(testSeedsDir);
+    await removeDirectory(testMigrationsDir);
+    await removeDirectory(testSeedsDir);
 
     // Restore environment variables
     if (originalMigrationsPath !== undefined) {
