@@ -8,7 +8,7 @@ export interface SqlToken {
 
 export class SqlTokenStore {
   private tokens = new Map<string, SqlToken>();
-  private cleanupInterval: NodeJS.Timeout;
+  private cleanupInterval: NodeJS.Timeout | undefined;
   private readonly tokenExpirationMs: number;
 
   /**
@@ -108,7 +108,7 @@ export class SqlTokenStore {
   destroy(): void {
     if (this.cleanupInterval != null) {
       clearInterval(this.cleanupInterval);
-      this.cleanupInterval = null as any;
+      this.cleanupInterval = undefined;
     }
   }
 
