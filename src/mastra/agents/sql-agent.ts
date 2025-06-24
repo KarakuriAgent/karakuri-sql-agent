@@ -1,7 +1,7 @@
 import { openai } from '@ai-sdk/openai';
 import { Agent } from '@mastra/core/agent';
 import { sqlTool } from '../tools/sql-tool';
-import { appDatabase } from '../../database/database-manager';
+import { DatabaseManager } from '../../database/database-manager';
 
 let schemaCache: { schema: string; timestamp: number } | null = null;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -12,7 +12,7 @@ export const sqlAgent = new Agent({
   instructions: async () => {
     // Explicitly create database and run migrations
     try {
-      await appDatabase.ensureInitialized();
+      await DatabaseManager.getInstance().ensureInitialized();
     } catch (error) {
       console.error('❌ SQL Agent: Database initialization failed:', error);
       throw error;
@@ -25,7 +25,7 @@ export const sqlAgent = new Agent({
       schema = schemaCache.schema;
     } else {
       try {
-        schema = await appDatabase.getSchema();
+        schema = await DatabaseManager.getInstance().getSchema();
         schemaCache = { schema, timestamp: Date.now() };
       } catch (error) {
         console.error('❌ SQL Agent: Failed to get schema:', error);
@@ -151,7 +151,6 @@ export const sqlAgent = new Agent({
     ## Error Handling
     - No matching data → "Sorry, that information doesn't seem to be registered."
     - Ambiguous request → "Could you be more specific? For example: 'last month's', 'Mr. Yamada's', etc."
-    - Dangerous operation → "Dangerous operation detected. Please confirm execution with the user."
 
     ## Important Instructions
     - When users request data, always use sqlTool to execute SQL queries and return actual data.
@@ -160,11 +159,22 @@ export const sqlAgent = new Agent({
       1. Do not generate SQL queries
       2. Convert schema information into user-friendly terms
     ## Output Format
+
+    ### If status is success
     1. Analyze user request
     2. Generate appropriate SQL query
     3. Execute query using sqlTool
     4. Format execution results appropriately for user response
     5. Return only results. No explanatory text needed
+
+    ### If status is needsConfirmation
+    The following example will return the JSON format:
+    {
+      "message": "The following will be added to your user information. Is this OK?\n\nName: kohei yamashita\n\nemail: aa@bb.cc",
+      "executeEndpoint": "/sql/execute",
+      "expiresIn": "ConfirmationToken in expiresIn",
+      "confirmationToken": "ConfirmationToken in response"
+    }
 `;
   },
   model: openai('gpt-4o-mini'),

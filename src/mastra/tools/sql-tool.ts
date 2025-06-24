@@ -1,6 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { appDatabase } from '../../database/database-manager';
+import { DatabaseManager } from '../../database/database-manager';
+import { sqlTokenStore } from '../services/sql-token-store';
 
 export const sqlTool = createTool({
   id: 'run-sql',
@@ -31,6 +32,7 @@ const runSQL = async (sql: string) => {
     const forbiddenOperation = getForbiddenOperation(sql);
     if (forbiddenOperation) {
       return {
+        status: 'error',
         result: `ERROR: Forbidden SQL operation detected: ${forbiddenOperation}\nOnly SELECT and allowed update operations are permitted.`,
       };
     }
@@ -39,16 +41,41 @@ const runSQL = async (sql: string) => {
     const needsConfirmation = isUpdateOperation(sql);
 
     if (needsConfirmation) {
+      // Generate token for update operation
+      const token = sqlTokenStore.generateToken();
+      sqlTokenStore.store(token, sql);
+
+      // Estimate impact (basic estimation based on query type)
+      const queryType = getQueryType(sql);
+      const tables = extractTableNames(sql);
+
       return {
-        result: `WARNING: This SQL operation modifies data and needs user confirmation before execution:\n${sql}`,
+        result: JSON.stringify(
+          {
+            status: 'needsConfirmation',
+            warning:
+              'This SQL operation modifies data and requires confirmation',
+            query: sql,
+            confirmationToken: token,
+            executeEndpoint: '/sql/execute',
+            expiresIn: '5 minutes',
+            estimatedImpact: {
+              queryType,
+              tables,
+            },
+          },
+          null,
+          2
+        ),
       };
     }
 
-    const result = await appDatabase.execute(sql);
+    const result = await DatabaseManager.getInstance().execute(sql);
 
     return {
       result: JSON.stringify(
         {
+          status: 'success',
           rows: result.rows,
           columns: result.columns,
           rowsAffected: result.rowsAffected,
@@ -143,4 +170,59 @@ const isUpdateOperation = (sql: string): boolean => {
   }
 
   return false;
+};
+
+const getQueryType = (sql: string): 'INSERT' | 'UPDATE' | 'DELETE' => {
+  const normalized = normalizeSql(sql).toUpperCase();
+
+  // Use more precise pattern matching to avoid false positives
+  if (/\bINSERT\s+INTO\b/.test(normalized)) return 'INSERT';
+  if (/\bUPDATE\s+\w+\s+SET\b/.test(normalized)) return 'UPDATE';
+  if (/\bDELETE\s+FROM\b/.test(normalized)) return 'DELETE';
+
+  // Default to UPDATE if uncertain
+  return 'UPDATE';
+};
+
+const extractTableNames = (sql: string): string[] => {
+  const normalized = normalizeSql(sql).toUpperCase();
+  const tables: string[] = [];
+
+  // Helper function to normalize table name (remove quotes and handle schema)
+  const normalizeTableName = (tableName: string): string => {
+    // Remove quotes (backticks, double quotes, square brackets)
+    const cleaned = tableName.replace(/[`"[\]]/g, '');
+    // If schema.table format, take only the table name
+    const parts = cleaned.split('.');
+    return parts[parts.length - 1].toLowerCase();
+  };
+
+  // Extract table names from INSERT INTO - supports quoted identifiers and schema.table
+  const insertMatch = normalized.match(
+    /INSERT\s+INTO\s+(?:([`"[]?\w+(?:\.\w+)?[`"\]]?)|(\w+(?:\.\w+)?))/
+  );
+  if (insertMatch) {
+    const tableName = insertMatch[1] || insertMatch[2];
+    tables.push(normalizeTableName(tableName));
+  }
+
+  // Extract table names from UPDATE - supports quoted identifiers and schema.table
+  const updateMatch = normalized.match(
+    /UPDATE\s+(?:([`"[]?\w+(?:\.\w+)?[`"\]]?)|(\w+(?:\.\w+)?))/
+  );
+  if (updateMatch) {
+    const tableName = updateMatch[1] || updateMatch[2];
+    tables.push(normalizeTableName(tableName));
+  }
+
+  // Extract table names from DELETE FROM - supports quoted identifiers and schema.table
+  const deleteMatch = normalized.match(
+    /DELETE\s+FROM\s+(?:([`"[]?\w+(?:\.\w+)?[`"\]]?)|(\w+(?:\.\w+)?))/
+  );
+  if (deleteMatch) {
+    const tableName = deleteMatch[1] || deleteMatch[2];
+    tables.push(normalizeTableName(tableName));
+  }
+
+  return [...new Set(tables)]; // Remove duplicates
 };

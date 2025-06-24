@@ -235,52 +235,69 @@ describe('SQL Tool', () => {
   });
 
   describe('Update Operation Confirmation', () => {
-    it('should return confirmation message for INSERT statements', async () => {
+    it('should return confirmation token for INSERT statements', async () => {
       const toolContext = createToolContext(
         "INSERT INTO users (name) VALUES ('test')"
       );
       const result = await sqlTool.execute(toolContext);
 
-      expect(result.result).toContain(
-        'WARNING: This SQL operation modifies data'
+      const parsedResult = JSON.parse(result.result);
+      expect(parsedResult.warning).toContain(
+        'This SQL operation modifies data and requires confirmation'
       );
-      expect(result.result).toContain('INSERT INTO users');
+      expect(parsedResult.query).toContain('INSERT INTO users');
+      expect(parsedResult.confirmationToken).toBeDefined();
+      expect(parsedResult.confirmationToken).toHaveLength(64); // 32 bytes hex
+      expect(parsedResult.executeEndpoint).toBe('/sql/execute');
+      expect(parsedResult.expiresIn).toBe('5 minutes');
+      expect(parsedResult.estimatedImpact.queryType).toBe('INSERT');
+      expect(parsedResult.estimatedImpact.tables).toContain('users');
       expect(mockExecute).not.toHaveBeenCalled();
     });
 
-    it('should return confirmation message for UPDATE statements', async () => {
+    it('should return confirmation token for UPDATE statements', async () => {
       const toolContext = createToolContext(
         "UPDATE users SET name = 'updated' WHERE id = 1"
       );
       const result = await sqlTool.execute(toolContext);
 
-      expect(result.result).toContain(
-        'WARNING: This SQL operation modifies data'
+      const parsedResult = JSON.parse(result.result);
+      expect(parsedResult.warning).toContain(
+        'This SQL operation modifies data and requires confirmation'
       );
-      expect(result.result).toContain('UPDATE users');
+      expect(parsedResult.query).toContain('UPDATE users');
+      expect(parsedResult.confirmationToken).toBeDefined();
+      expect(parsedResult.estimatedImpact.queryType).toBe('UPDATE');
+      expect(parsedResult.estimatedImpact.tables).toContain('users');
       expect(mockExecute).not.toHaveBeenCalled();
     });
 
-    it('should return confirmation message for DELETE statements', async () => {
+    it('should return confirmation token for DELETE statements', async () => {
       const toolContext = createToolContext('DELETE FROM users WHERE id = 1');
       const result = await sqlTool.execute(toolContext);
 
-      expect(result.result).toContain(
-        'WARNING: This SQL operation modifies data'
+      const parsedResult = JSON.parse(result.result);
+      expect(parsedResult.warning).toContain(
+        'This SQL operation modifies data and requires confirmation'
       );
-      expect(result.result).toContain('DELETE FROM users');
+      expect(parsedResult.query).toContain('DELETE FROM users');
+      expect(parsedResult.confirmationToken).toBeDefined();
+      expect(parsedResult.estimatedImpact.queryType).toBe('DELETE');
+      expect(parsedResult.estimatedImpact.tables).toContain('users');
       expect(mockExecute).not.toHaveBeenCalled();
     });
 
-    it('should return confirmation message for multiple update operations', async () => {
+    it('should return confirmation token for multiple update operations', async () => {
       const toolContext = createToolContext(
         "INSERT INTO users (name) VALUES ('test'); UPDATE users SET name = 'updated' WHERE id = 1;"
       );
       const result = await sqlTool.execute(toolContext);
 
-      expect(result.result).toContain(
-        'WARNING: This SQL operation modifies data'
+      const parsedResult = JSON.parse(result.result);
+      expect(parsedResult.warning).toContain(
+        'This SQL operation modifies data and requires confirmation'
       );
+      expect(parsedResult.confirmationToken).toBeDefined();
       expect(mockExecute).not.toHaveBeenCalled();
     });
 
@@ -424,9 +441,11 @@ describe('SQL Tool', () => {
           );
           expect(mockExecute).not.toHaveBeenCalled();
         } else if (test.expectWarning) {
-          expect(result.result).toContain(
-            'WARNING: This SQL operation modifies data'
+          const parsedResult = JSON.parse(result.result);
+          expect(parsedResult.warning).toContain(
+            'This SQL operation modifies data and requires confirmation'
           );
+          expect(parsedResult.confirmationToken).toBeDefined();
           expect(mockExecute).not.toHaveBeenCalled();
         } else {
           mockExecute.mockResolvedValueOnce(createMockResult([]));
