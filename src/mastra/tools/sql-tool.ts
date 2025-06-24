@@ -188,22 +188,40 @@ const extractTableNames = (sql: string): string[] => {
   const normalized = normalizeSql(sql).toUpperCase();
   const tables: string[] = [];
 
-  // Extract table names from INSERT INTO
-  const insertMatch = normalized.match(/INSERT\s+INTO\s+(\w+)/);
+  // Helper function to normalize table name (remove quotes and handle schema)
+  const normalizeTableName = (tableName: string): string => {
+    // Remove quotes (backticks, double quotes, square brackets)
+    const cleaned = tableName.replace(/[`"[\]]/g, '');
+    // If schema.table format, take only the table name
+    const parts = cleaned.split('.');
+    return parts[parts.length - 1].toLowerCase();
+  };
+
+  // Extract table names from INSERT INTO - supports quoted identifiers and schema.table
+  const insertMatch = normalized.match(
+    /INSERT\s+INTO\s+(?:([`"[]?\w+(?:\.\w+)?[`"\]]?)|(\w+(?:\.\w+)?))/
+  );
   if (insertMatch) {
-    tables.push(insertMatch[1].toLowerCase());
+    const tableName = insertMatch[1] || insertMatch[2];
+    tables.push(normalizeTableName(tableName));
   }
 
-  // Extract table names from UPDATE
-  const updateMatch = normalized.match(/UPDATE\s+(\w+)/);
+  // Extract table names from UPDATE - supports quoted identifiers and schema.table
+  const updateMatch = normalized.match(
+    /UPDATE\s+(?:([`"[]?\w+(?:\.\w+)?[`"\]]?)|(\w+(?:\.\w+)?))/
+  );
   if (updateMatch) {
-    tables.push(updateMatch[1].toLowerCase());
+    const tableName = updateMatch[1] || updateMatch[2];
+    tables.push(normalizeTableName(tableName));
   }
 
-  // Extract table names from DELETE FROM
-  const deleteMatch = normalized.match(/DELETE\s+FROM\s+(\w+)/);
+  // Extract table names from DELETE FROM - supports quoted identifiers and schema.table
+  const deleteMatch = normalized.match(
+    /DELETE\s+FROM\s+(?:([`"[]?\w+(?:\.\w+)?[`"\]]?)|(\w+(?:\.\w+)?))/
+  );
   if (deleteMatch) {
-    tables.push(deleteMatch[1].toLowerCase());
+    const tableName = deleteMatch[1] || deleteMatch[2];
+    tables.push(normalizeTableName(tableName));
   }
 
   return [...new Set(tables)]; // Remove duplicates
