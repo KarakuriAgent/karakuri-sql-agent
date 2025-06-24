@@ -175,9 +175,10 @@ const isUpdateOperation = (sql: string): boolean => {
 const getQueryType = (sql: string): 'INSERT' | 'UPDATE' | 'DELETE' => {
   const normalized = normalizeSql(sql).toUpperCase();
 
-  if (normalized.includes('INSERT')) return 'INSERT';
-  if (normalized.includes('UPDATE')) return 'UPDATE';
-  if (normalized.includes('DELETE')) return 'DELETE';
+  // Use more precise pattern matching to avoid false positives
+  if (/\bINSERT\s+INTO\b/.test(normalized)) return 'INSERT';
+  if (/\bUPDATE\s+\w+\s+SET\b/.test(normalized)) return 'UPDATE';
+  if (/\bDELETE\s+FROM\b/.test(normalized)) return 'DELETE';
 
   // Default to UPDATE if uncertain
   return 'UPDATE';
