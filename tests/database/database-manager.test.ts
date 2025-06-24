@@ -91,10 +91,11 @@ describe('DatabaseManager', () => {
   });
 
   describe('Database Connection', () => {
-    it('should use DATABASE_URL environment variable when set', () => {
+    it('should use DATABASE_URL environment variable when set', async () => {
       process.env.DATABASE_URL = 'file:test.db';
 
-      DatabaseManager.getInstance();
+      const manager = DatabaseManager.getInstance();
+      await manager.ensureInitialized();
 
       expect(mockCreateClient).toHaveBeenCalledWith({
         url: 'file:test.db',

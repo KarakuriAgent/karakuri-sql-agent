@@ -2,3 +2,9 @@ OPENAI_API_KEY=your-api-key
 DATABASE_MIGRATIONS_PATH='../../example/database/migrations'
 DATABASE_SEEDS_PATH='../../example/database/seeds'
 DATABASE_URL='file:../../example/database/app.db'
+
+# SQL Token Store Configuration
+# Cleanup interval for expired tokens in milliseconds (default: 60000 = 1 minute)
+SQL_TOKEN_CLEANUP_INTERVAL_MS=60000
+# Token expiration time in milliseconds (default: 300000 = 5 minutes)  
+SQL_TOKEN_EXPIRATION_MS=300000

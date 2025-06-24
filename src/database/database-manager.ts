@@ -2,18 +2,12 @@ import { createClient, Client, ResultSet } from '@libsql/client';
 import { runMigrations } from './migration-manager';
 
 export class DatabaseManager {
-  private static instance: DatabaseManager;
-  private client: Client;
+  private static instance: DatabaseManager | null = null;
+  private client: Client | null = null;
   private isInitialized = false;
   private initializationPromise: Promise<void> | null = null;
   private isConnected = false;
   private isInitializing = false;
-
-  private constructor() {
-    this.client = createClient({
-      url: this.getDatabaseUrl(),
-    });
-  }
 
   static getInstance(): DatabaseManager {
     if (!DatabaseManager.instance) {
@@ -24,6 +18,15 @@ export class DatabaseManager {
 
   private getDatabaseUrl(): string {
     return process.env.DATABASE_URL || 'file:../../database/app.db';
+  }
+
+  private createClientIfNeeded(): Client {
+    if (!this.client) {
+      this.client = createClient({
+        url: this.getDatabaseUrl(),
+      });
+    }
+    return this.client;
   }
 
   async ensureInitialized() {
@@ -42,11 +45,12 @@ export class DatabaseManager {
   private async performInitialization(): Promise<void> {
     this.isInitializing = true;
     try {
+      const client = this.createClientIfNeeded();
       // Enable SQLite WAL mode for performance improvement
-      await this.client.execute('PRAGMA journal_mode = WAL;');
-      await this.client.execute('PRAGMA synchronous = NORMAL;');
-      await this.client.execute('PRAGMA cache_size = -64000;'); // 64MB cache
-      await this.client.execute('PRAGMA temp_store = MEMORY;');
+      await client.execute('PRAGMA journal_mode = WAL;');
+      await client.execute('PRAGMA synchronous = NORMAL;');
+      await client.execute('PRAGMA cache_size = -64000;'); // 64MB cache
+      await client.execute('PRAGMA temp_store = MEMORY;');
 
       // Verify connection status
       await this.verifyConnection();
@@ -68,12 +72,14 @@ export class DatabaseManager {
   }
 
   getClient(): Client {
-    return this.client;
+    return this.createClientIfNeeded();
   }
 
   async close(): Promise<void> {
     try {
-      this.client.close();
+      if (this.client) {
+        this.client.close();
+      }
       this.isConnected = false;
       console.log('📊 Database connection closed');
     } catch (error) {
@@ -87,7 +93,7 @@ export class DatabaseManager {
       if (!this.isInitializing) {
         await this.ensureInitialized();
       }
-      return await this.client.execute(sql);
+      return await this.createClientIfNeeded().execute(sql);
     } catch (error) {
       console.error('❌ SQL execution failed:', error);
       throw error;
@@ -108,7 +114,7 @@ export class DatabaseManager {
   // Verify connection status
   private async verifyConnection(): Promise<void> {
     try {
-      await this.client.execute('SELECT 1');
+      await this.createClientIfNeeded().execute('SELECT 1');
     } catch (error) {
       throw new Error(
         `Database connection verification failed: ${error instanceof Error ? error.message : String(error)}`
@@ -120,20 +126,21 @@ export class DatabaseManager {
   async executeTransaction(queries: string[]): Promise<ResultSet[]> {
     await this.ensureInitialized();
 
+    const client = this.createClientIfNeeded();
     try {
-      await this.client.execute('BEGIN TRANSACTION');
+      await client.execute('BEGIN TRANSACTION');
       const results: ResultSet[] = [];
 
       for (const query of queries) {
-        const result = await this.client.execute(query);
+        const result = await client.execute(query);
         results.push(result);
       }
 
-      await this.client.execute('COMMIT');
+      await client.execute('COMMIT');
       return results;
     } catch (error) {
       try {
-        await this.client.execute('ROLLBACK');
+        await client.execute('ROLLBACK');
       } catch (rollbackError) {
         console.error('❌ Rollback failed:', rollbackError);
       }
@@ -145,9 +152,10 @@ export class DatabaseManager {
   // Optimize database
   async optimize(): Promise<void> {
     await this.ensureInitialized();
+    const client = this.createClientIfNeeded();
     try {
-      await this.client.execute('PRAGMA optimize');
-      await this.client.execute('VACUUM');
+      await client.execute('PRAGMA optimize');
+      await client.execute('VACUUM');
       console.log('📊 Database optimized successfully');
     } catch (error) {
       console.error('❌ Database optimization failed:', error);
@@ -159,7 +167,7 @@ export class DatabaseManager {
   async getSchema(): Promise<string> {
     await this.ensureInitialized();
 
-    const result = await this.client.execute(`
+    const result = await this.createClientIfNeeded().execute(`
       SELECT sql FROM sqlite_master 
       WHERE type IN ('table', 'index') 
       AND name NOT LIKE 'sqlite_%' 
@@ -178,10 +186,11 @@ export class DatabaseManager {
       DatabaseManager.instance.isInitialized = false;
       DatabaseManager.instance.initializationPromise = null;
       DatabaseManager.instance.isConnected = false;
-      // @ts-expect-error - Needed for testing to reset singleton instance
-      DatabaseManager.instance = undefined;
+      DatabaseManager.instance.client = null;
+      // Explicitly reset singleton instance for testing
+      (
+        DatabaseManager as unknown as { instance: DatabaseManager | null }
+      ).instance = null;
     }
   }
 }
-
-export const appDatabase = DatabaseManager.getInstance();

@@ -56,13 +56,33 @@ describe('Migration Manager', () => {
   });
 
   afterEach(() => {
-    // Remove test directories
-    if (existsSync(testMigrationsDir)) {
-      rmSync(testMigrationsDir, { recursive: true, force: true });
-    }
-    if (existsSync(testSeedsDir)) {
-      rmSync(testSeedsDir, { recursive: true, force: true });
-    }
+    // Remove test directories with retry logic
+    const removeDirectory = (dir: string) => {
+      if (existsSync(dir)) {
+        try {
+          rmSync(dir, { recursive: true, force: true });
+        } catch (error) {
+          // Retry once on Windows ENOTEMPTY error
+          if (error instanceof Error && error.message.includes('ENOTEMPTY')) {
+            setTimeout(() => {
+              try {
+                rmSync(dir, { recursive: true, force: true });
+              } catch (retryError) {
+                console.warn(
+                  `Failed to remove test directory ${dir}:`,
+                  retryError
+                );
+              }
+            }, 100);
+          } else {
+            console.warn(`Failed to remove test directory ${dir}:`, error);
+          }
+        }
+      }
+    };
+
+    removeDirectory(testMigrationsDir);
+    removeDirectory(testSeedsDir);
 
     // Restore environment variables
     if (originalMigrationsPath !== undefined) {
