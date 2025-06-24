@@ -11,15 +11,36 @@ export class SqlTokenStore {
   private cleanupInterval: NodeJS.Timeout;
   private readonly tokenExpirationMs: number;
 
+  /**
+   * Safely parse integer from environment variable with validation and fallback
+   */
+  private static parseEnvInt(
+    envValue: string | undefined,
+    defaultValue: number
+  ): number {
+    if (!envValue) {
+      return defaultValue;
+    }
+
+    const parsed = parseInt(envValue, 10);
+    if (isNaN(parsed) || parsed < 0) {
+      return defaultValue;
+    }
+
+    return parsed;
+  }
+
   constructor() {
     // Get cleanup interval from environment variable, default to 1 minute
-    const cleanupIntervalMs = parseInt(
-      process.env.SQL_TOKEN_CLEANUP_INTERVAL_MS || '60000'
+    const cleanupIntervalMs = SqlTokenStore.parseEnvInt(
+      process.env.SQL_TOKEN_CLEANUP_INTERVAL_MS,
+      60000
     );
 
     // Get token expiration from environment variable, default to 5 minutes
-    this.tokenExpirationMs = parseInt(
-      process.env.SQL_TOKEN_EXPIRATION_MS || '300000'
+    this.tokenExpirationMs = SqlTokenStore.parseEnvInt(
+      process.env.SQL_TOKEN_EXPIRATION_MS,
+      300000
     );
 
     // Start cleanup interval to remove expired tokens
