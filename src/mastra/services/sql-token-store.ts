@@ -85,8 +85,9 @@ export class SqlTokenStore {
    * Stop the cleanup interval (for cleanup)
    */
   destroy(): void {
-    if (this.cleanupInterval) {
+    if (this.cleanupInterval != null) {
       clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null as any;
     }
   }
 
