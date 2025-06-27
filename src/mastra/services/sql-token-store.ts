@@ -1,4 +1,5 @@
 import { randomBytes } from 'crypto';
+import { sqlTokenConfig } from '../../config/env';
 
 export interface SqlToken {
   query: string;
@@ -11,42 +12,14 @@ export class SqlTokenStore {
   private cleanupInterval: NodeJS.Timeout | undefined;
   private readonly tokenExpirationMs: number;
 
-  /**
-   * Safely parse integer from environment variable with validation and fallback
-   */
-  private static parseEnvInt(
-    envValue: string | undefined,
-    defaultValue: number
-  ): number {
-    if (!envValue) {
-      return defaultValue;
-    }
-
-    const parsed = parseInt(envValue, 10);
-    if (isNaN(parsed) || parsed < 0) {
-      return defaultValue;
-    }
-
-    return parsed;
-  }
-
   constructor() {
-    // Get cleanup interval from environment variable, default to 1 minute
-    const cleanupIntervalMs = SqlTokenStore.parseEnvInt(
-      process.env.SQL_TOKEN_CLEANUP_INTERVAL_MS,
-      60000
-    );
-
-    // Get token expiration from environment variable, default to 5 minutes
-    this.tokenExpirationMs = SqlTokenStore.parseEnvInt(
-      process.env.SQL_TOKEN_EXPIRATION_MS,
-      300000
-    );
+    // Use centralized configuration
+    this.tokenExpirationMs = sqlTokenConfig.expirationMs;
 
     // Start cleanup interval to remove expired tokens
     this.cleanupInterval = setInterval(() => {
       this.cleanupExpired();
-    }, cleanupIntervalMs);
+    }, sqlTokenConfig.cleanupIntervalMs);
   }
 
   /**

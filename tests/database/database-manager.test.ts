@@ -19,6 +19,7 @@ const originalEnv = process.env;
 import { DatabaseManager } from '../../src/database/database-manager';
 import { runMigrations } from '../../src/database/migration-manager';
 import { createClient } from '@libsql/client';
+import { resetConfig } from '../../src/config/env';
 
 describe('DatabaseManager', () => {
   const mockExecute = vi.fn();
@@ -31,6 +32,9 @@ describe('DatabaseManager', () => {
 
     // Reset singleton instance
     await DatabaseManager.resetInstance();
+
+    // Reset configuration to reload with new environment variables
+    resetConfig();
 
     // Setup mock client with SQLite PRAGMA support
     mockExecute

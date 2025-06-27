@@ -1,11 +1,16 @@
 import { readFileSync, readdirSync } from 'fs';
 import { join, dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
 import { DatabaseManager } from './database-manager';
+import { databaseConfig } from '../config/env';
+
+// ES module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Helper function to extract directory path from DATABASE_URL
 const getDatabaseDirectoryFromUrl = (): string => {
-  const databaseUrl =
-    process.env.DATABASE_URL || 'file:./example/database/app.db';
+  const databaseUrl = databaseConfig.url;
 
   if (databaseUrl.startsWith('file:')) {
     // Remove 'file:' prefix and get directory path

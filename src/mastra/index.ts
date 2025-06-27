@@ -2,6 +2,7 @@ import { Mastra } from '@mastra/core/mastra';
 import { PinoLogger } from '@mastra/loggers';
 import { sqlAgent } from './agents/sql-agent';
 import { sqlExecuteRoute } from './api/sql-execute';
+import { serverConfig } from '../config/env';
 
 export const mastra = new Mastra({
   agents: { sqlAgent },
@@ -10,10 +11,8 @@ export const mastra = new Mastra({
     level: 'info',
   }),
   server: {
-    host: process.env.HOST || 'localhost',
-    port: process.env.MASTRA_PORT
-      ? parseInt(process.env.MASTRA_PORT, 10)
-      : 4111,
+    host: serverConfig.host,
+    port: serverConfig.mastraPort,
     apiRoutes: [sqlExecuteRoute],
   },
 });

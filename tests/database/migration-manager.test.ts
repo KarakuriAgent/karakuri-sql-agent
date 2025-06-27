@@ -16,6 +16,7 @@ import {
   rollbackMigration,
 } from '../../src/database/migration-manager';
 import { appDatabase } from '../../src/database/database-manager';
+import { resetConfig } from '../../src/config/env';
 
 describe('Migration Manager', () => {
   const testDatabaseDir = resolve(__dirname, '../test-database');
@@ -38,6 +39,9 @@ describe('Migration Manager', () => {
   beforeEach(async () => {
     // Set test environment variable to use test database
     process.env.DATABASE_URL = `file:${join(testDatabaseDir, 'test.db')}`;
+
+    // Reset configuration to use new environment variables
+    resetConfig();
 
     // Reset mocks and set default return values
     vi.mocked(appDatabase.execute).mockClear();
@@ -90,6 +94,9 @@ describe('Migration Manager', () => {
     } else {
       process.env.DATABASE_URL = undefined;
     }
+
+    // Reset configuration after restoring environment variables
+    resetConfig();
 
     vi.restoreAllMocks();
   });
