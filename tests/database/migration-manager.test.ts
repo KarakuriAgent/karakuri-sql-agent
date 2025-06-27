@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { writeFileSync, mkdirSync, rmSync, existsSync } from 'fs';
-import { join } from 'path';
+import { join, resolve } from 'path';
 
 // Mock database-manager
 vi.mock('../../src/database/database-manager', () => ({
@@ -18,7 +18,7 @@ import {
 import { appDatabase } from '../../src/database/database-manager';
 
 describe('Migration Manager', () => {
-  const testDatabaseDir = join(process.cwd(), 'test-database');
+  const testDatabaseDir = resolve(__dirname, '../test-database');
   const testMigrationsDir = join(testDatabaseDir, 'migrations');
   const testSeedsDir = join(testDatabaseDir, 'seeds');
 

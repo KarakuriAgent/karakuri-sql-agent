@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, resolve } from 'path';
 import { DatabaseManager } from './database-manager';
 
 // Helper function to extract directory path from DATABASE_URL
@@ -10,11 +10,11 @@ const getDatabaseDirectoryFromUrl = (): string => {
   if (databaseUrl.startsWith('file:')) {
     // Remove 'file:' prefix and get directory path
     const filePath = databaseUrl.replace(/^file:/, '');
-    return dirname(filePath);
+    return dirname(resolve(filePath));
   }
 
-  // For other database types, fallback to current working directory
-  return join(process.cwd(), 'database');
+  // For other database types, fallback to project database directory
+  return resolve(__dirname, '../../example/database');
 };
 
 // Table to manage migration status
