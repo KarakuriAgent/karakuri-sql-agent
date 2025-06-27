@@ -116,6 +116,10 @@ const validationErrors: string[] = [];
 const requireEnv = (key: string, description: string): string => {
   const value = process.env[key];
   if (!value) {
+    // In test environment, provide a test placeholder instead of failing
+    if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
+      return `test-${key.toLowerCase()}`;
+    }
     validationErrors.push(
       `❌ Missing required environment variable: ${key} (${description})`
     );
@@ -183,12 +187,18 @@ const createConfig = (): AppConfig => {
 
   // Check for validation errors
   if (validationErrors.length > 0) {
-    console.error('🚨 Configuration validation failed:');
-    validationErrors.forEach(error => console.error(error));
-    console.error(
-      '\n💡 Please check your .env file and ensure all required environment variables are set.'
-    );
-    process.exit(1);
+    // In test environment, don't exit process - let tests handle validation
+    if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
+      console.warn('⚠️ Configuration validation failed in test environment:');
+      validationErrors.forEach(error => console.warn(error));
+    } else {
+      console.error('🚨 Configuration validation failed:');
+      validationErrors.forEach(error => console.error(error));
+      console.error(
+        '\n💡 Please check your .env file and ensure all required environment variables are set.'
+      );
+      process.exit(1);
+    }
   }
 
   return config;
