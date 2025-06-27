@@ -88,7 +88,7 @@ describe('Migration Manager', () => {
     if (originalDatabaseUrl !== undefined) {
       process.env.DATABASE_URL = originalDatabaseUrl;
     } else {
-      delete process.env.DATABASE_URL;
+      process.env.DATABASE_URL = undefined;
     }
 
     vi.restoreAllMocks();
