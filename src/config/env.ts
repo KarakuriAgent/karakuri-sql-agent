@@ -28,6 +28,7 @@ export interface MCPConfig {
   enableStdio: boolean;
   enableSSE: boolean;
   enableHTTP: boolean;
+  apiKey?: string; // Optional API key for HTTP/SSE authentication
 }
 
 export interface SQLAgentConfig {
@@ -150,6 +151,7 @@ const createConfig = (): AppConfig => {
       enableStdio: parseBoolean(process.env.MCP_ENABLE_STDIO, true),
       enableSSE: parseBoolean(process.env.MCP_ENABLE_SSE, true),
       enableHTTP: parseBoolean(process.env.MCP_ENABLE_HTTP, true),
+      apiKey: process.env.MCP_API_KEY, // Optional API key
     },
     sqlAgent: {
       toolId: process.env.SQL_AGENT_TOOL_ID || 'sqlAgent',
@@ -254,6 +256,9 @@ export const mcpConfig = {
   },
   get enableHTTP() {
     return getConfigInternal().mcp.enableHTTP;
+  },
+  get apiKey() {
+    return getConfigInternal().mcp.apiKey;
   },
 };
 
