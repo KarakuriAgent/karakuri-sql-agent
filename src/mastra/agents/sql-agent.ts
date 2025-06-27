@@ -1,6 +1,6 @@
 import { openai } from '@ai-sdk/openai';
 import { Agent } from '@mastra/core/agent';
-import { sqlTool } from '../tools/sql-tool';
+import { sqlTool } from '../tools/sql-query-handler';
 import { DatabaseManager } from '../../database/database-manager';
 
 let schemaCache: { schema: string; timestamp: number } | null = null;

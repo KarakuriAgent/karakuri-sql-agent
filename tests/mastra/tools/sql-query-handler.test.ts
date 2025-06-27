@@ -30,7 +30,7 @@ vi.mock('../../../src/database/database-manager', () => {
 
 const originalEnv = process.env;
 
-import { sqlTool } from '../../../src/mastra/tools/sql-tool';
+import { sqlTool } from '../../../src/mastra/tools/sql-query-handler';
 import { appDatabase } from '../../../src/database/database-manager';
 import { runMigrations } from '../../../src/database/migration-manager';
 

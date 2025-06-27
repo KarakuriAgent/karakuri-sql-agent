@@ -1,5 +1,5 @@
 import { MCPServer } from '@mastra/mcp';
-import { sqlExecuteTool } from './tools/sql-execute-tool';
+import { sqlExecuteTool } from './tools/sql-confirm-execute-tool';
 import { sqlAgentTool } from './tools/sql-agent-tool';
 import { mcpConfig, serverConfig, sqlAgentConfig } from '../config/env';
 import http from 'http';

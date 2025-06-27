@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { sqlTokenStore } from '../../../src/mastra/services/sql-token-store';
-import { sqlExecuteRoute } from '../../../src/mastra/api/sql-execute';
+import { sqlExecuteRoute } from '../../../src/mastra/api/sql-confirm-execute';
 
 // Mock the DatabaseManager
 vi.mock('../../../src/database/database-manager', () => ({
