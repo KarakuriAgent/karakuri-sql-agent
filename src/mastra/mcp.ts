@@ -4,6 +4,28 @@ import { sqlExecuteTool } from './tools/sql-execute-tool';
 import { sqlAgentTool } from './tools/sql-agent-tool';
 import http from 'http';
 
+// Helper function to safely parse port numbers
+const parsePort = (
+  portString: string | undefined,
+  defaultPort: number,
+  portName: string
+): number => {
+  if (!portString) {
+    return defaultPort;
+  }
+
+  const parsed = parseInt(portString, 10);
+
+  if (isNaN(parsed) || parsed < 1 || parsed > 65535) {
+    console.error(
+      `❌ Invalid ${portName} port: "${portString}". Must be a number between 1-65535. Using default port ${defaultPort}.`
+    );
+    return defaultPort;
+  }
+
+  return parsed;
+};
+
 // Get configuration from environment variables
 const mcpServerName = process.env.MCP_SERVER_NAME || 'SQL agent server';
 const mcpServerDescription =
@@ -36,11 +58,11 @@ if (enableStdio) {
 
 // Start the MCP server using sse transport
 if (enableSSE) {
+  const ssePort = parsePort(process.env.SSE_PORT, 4112, 'SSE');
   const sseServer = http.createServer(async (req, res) => {
     const host = process.env.HOST || 'localhost';
-    const port = process.env.SSE_PORT || '4112';
     await server.startSSE({
-      url: new URL(req.url || '', `http://${host}:${port}`),
+      url: new URL(req.url || '', `http://${host}:${ssePort}`),
       ssePath: '/sse',
       messagePath: '/message',
       req,
@@ -48,8 +70,7 @@ if (enableSSE) {
     });
   });
 
-  const ssePort = process.env.SSE_PORT || '4112';
-  sseServer.listen(parseInt(ssePort), () => {
+  sseServer.listen(ssePort, () => {
     console.log(`SSE server listening on port ${ssePort}`);
   });
 } else {
@@ -58,11 +79,11 @@ if (enableSSE) {
 
 // Start the MCP server using http transport
 if (enableHTTP) {
+  const httpPort = parsePort(process.env.HTTP_PORT, 4113, 'HTTP');
   const httpServer = http.createServer(async (req, res) => {
     const host = process.env.HOST || 'localhost';
-    const port = process.env.HTTP_PORT || '4113';
     await server.startHTTP({
-      url: new URL(req.url || '', `http://${host}:${port}`),
+      url: new URL(req.url || '', `http://${host}:${httpPort}`),
       httpPath: `/mcp`,
       req,
       res,
@@ -72,8 +93,7 @@ if (enableHTTP) {
     });
   });
 
-  const httpPort = process.env.HTTP_PORT || '4113';
-  httpServer.listen(parseInt(httpPort), () => {
+  httpServer.listen(httpPort, () => {
     console.log(`HTTP server listening on port ${httpPort}`);
   });
 } else {
