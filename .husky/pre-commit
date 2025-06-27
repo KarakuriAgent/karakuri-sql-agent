@@ -43,4 +43,12 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+# Test CI environment (without env vars)
+echo "🧪 Testing CI environment..."
+npm run test:ci
+if [ $? -ne 0 ]; then
+  echo "❌ CI tests failed"
+  exit 1
+fi
+
 echo "✅ All checks passed!"

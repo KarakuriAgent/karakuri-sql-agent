@@ -1,19 +1,14 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { sqlAgent } from '../agents/sql-agent';
-
-// Load configuration from environment variables
-const toolId = process.env.SQL_AGENT_TOOL_ID || 'sqlAgent';
-const toolDescription =
-  process.env.SQL_AGENT_TOOL_DESCRIPTION ||
-  'Perform database operations using natural language.';
+import { sqlAgentConfig } from '../../config/env';
 
 /**
  * Wrapper tool to expose the agent with a custom name
  */
 export const sqlAgentTool = createTool({
-  id: toolId,
-  description: toolDescription,
+  id: sqlAgentConfig.toolId,
+  description: sqlAgentConfig.toolDescription,
   inputSchema: z.object({
     message: z.string().describe('The query or question for the SQL agent'),
   }),
