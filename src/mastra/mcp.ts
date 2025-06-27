@@ -38,7 +38,11 @@ const server = new MCPServer({
   description: mcpServerDescription,
   version: mcpServerVersion,
   tools: {
+    // Dynamic key: sqlAgentTool can be customized for specific use cases
+    // (e.g., "gym-sql-assistant", "restaurant-db-helper")
     [sqlAgentToolId]: sqlAgentTool,
+    // Fixed key: sqlExecuteTool is an internal utility tool that doesn't need
+    // customization and always has the same purpose (token-based SQL execution)
     sqlExecuteTool,
   },
 });
