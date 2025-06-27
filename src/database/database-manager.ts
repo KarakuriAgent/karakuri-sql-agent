@@ -1,4 +1,5 @@
 import { createClient, Client, ResultSet } from '@libsql/client';
+import { resolve } from 'path';
 import { runMigrations } from './migration-manager';
 
 export class DatabaseManager {
@@ -17,7 +18,10 @@ export class DatabaseManager {
   }
 
   private getDatabaseUrl(): string {
-    return process.env.DATABASE_URL || 'file:../../database/app.db';
+    return (
+      process.env.DATABASE_URL ||
+      `file:${resolve(__dirname, '../../example/database/app.db')}`
+    );
   }
 
   private createClientIfNeeded(): Client {

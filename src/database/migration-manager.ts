@@ -1,6 +1,21 @@
 import { readFileSync, readdirSync } from 'fs';
-import { join } from 'path';
+import { join, dirname, resolve } from 'path';
 import { DatabaseManager } from './database-manager';
+
+// Helper function to extract directory path from DATABASE_URL
+const getDatabaseDirectoryFromUrl = (): string => {
+  const databaseUrl =
+    process.env.DATABASE_URL || 'file:./example/database/app.db';
+
+  if (databaseUrl.startsWith('file:')) {
+    // Remove 'file:' prefix and get directory path
+    const filePath = databaseUrl.replace(/^file:/, '');
+    return dirname(resolve(filePath));
+  }
+
+  // For other database types, fallback to project database directory
+  return resolve(__dirname, '../../example/database');
+};
 
 // Table to manage migration status
 const createMigrationTable = async (database: DatabaseManager) => {
@@ -64,9 +79,8 @@ const getAppliedMigrations = async (
 
 // Get migration files
 const getMigrationFiles = (): string[] => {
-  const migrationsDir =
-    process.env.DATABASE_MIGRATIONS_PATH ||
-    join(process.cwd(), 'database', 'migrations');
+  const databaseDir = getDatabaseDirectoryFromUrl();
+  const migrationsDir = join(databaseDir, 'migrations');
 
   try {
     const files = readdirSync(migrationsDir)
@@ -82,9 +96,8 @@ const getMigrationFiles = (): string[] => {
 
 // Execute migration
 const runMigration = async (database: DatabaseManager, filename: string) => {
-  const migrationsDir =
-    process.env.DATABASE_MIGRATIONS_PATH ||
-    join(process.cwd(), 'database', 'migrations');
+  const databaseDir = getDatabaseDirectoryFromUrl();
+  const migrationsDir = join(databaseDir, 'migrations');
   const migrationPath = join(migrationsDir, filename);
   const sql = readFileSync(migrationPath, 'utf-8');
 
@@ -108,8 +121,8 @@ const runMigration = async (database: DatabaseManager, filename: string) => {
 
 // Execute seed data
 const runSeeds = async (database: DatabaseManager) => {
-  const seedsDir =
-    process.env.DATABASE_SEEDS_PATH || join(process.cwd(), 'database', 'seeds');
+  const databaseDir = getDatabaseDirectoryFromUrl();
+  const seedsDir = join(databaseDir, 'seeds');
   try {
     const seedFiles = readdirSync(seedsDir)
       .filter(file => file.endsWith('.sql'))

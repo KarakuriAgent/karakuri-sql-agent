@@ -11,6 +11,7 @@
     "dev": "mastra dev",
     "build": "mastra build",
     "start": "mastra start",
+    "start:mcp": "npx tsx ./src/mastra/mcp.ts",
     "lint": "eslint . --ext .ts,.js",
     "lint:fix": "eslint . --ext .ts,.js --fix",
     "format": "prettier --write .",
@@ -31,6 +32,7 @@
     "@mastra/core": "^0.10.6",
     "@mastra/libsql": "^0.10.3",
     "@mastra/loggers": "^0.10.2",
+    "@mastra/mcp": "^0.10.5",
     "@mastra/memory": "^0.10.4",
     "zod": "^3.25.67"
   },
