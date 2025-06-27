@@ -15,8 +15,8 @@ const _executeResponseSchema = z.object({
     .object({
       rowsAffected: z.number().optional(),
       lastInsertRowid: z.union([z.number(), z.string(), z.null()]).optional(),
-      columns: z.array(z.any()).optional(),
-      rows: z.array(z.any()).optional(),
+      columns: z.array(z.string()).optional(),
+      rows: z.array(z.record(z.unknown())).optional(),
     })
     .optional(),
   error: z.string().optional(),
