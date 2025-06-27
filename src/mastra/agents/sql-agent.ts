@@ -170,6 +170,7 @@ export const sqlAgent = new Agent({
     ### If status is needsConfirmation
     The following example will return the JSON format:
     {
+      "description": "The user must execute the executeEndpoint endpoint. Tell them to set the confirmationToken content. The confirmationToken expires after expiresIn. message is a sample message to display in the dialog. Use it according to the user's language.",
       "message": "The following will be added to your user information. Is this OK?\n\nName: kohei yamashita\n\nemail: aa@bb.cc",
       "executeEndpoint": "/sql/execute",
       "expiresIn": "ConfirmationToken in expiresIn",

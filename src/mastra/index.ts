@@ -10,6 +10,10 @@ export const mastra = new Mastra({
     level: 'info',
   }),
   server: {
+    host: process.env.HOST || 'localhost',
+    port: process.env.MASTRA_PORT
+      ? parseInt(process.env.MASTRA_PORT, 10)
+      : 4111,
     apiRoutes: [sqlExecuteRoute],
   },
 });

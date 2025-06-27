@@ -1,7 +1,6 @@
 import { registerApiRoute } from '@mastra/core/server';
 import { z } from 'zod';
-import { DatabaseManager } from '../../database/database-manager';
-import { sqlTokenStore } from '../services/sql-token-store';
+import { executeSqlWithToken } from '../services/sql-executor';
 
 // Request schema
 const executeRequestSchema = z.object({
@@ -157,59 +156,25 @@ export const sqlExecuteRoute = registerApiRoute('/sql/execute', {
 
       const { token } = validationResult.data;
 
-      // Get and invalidate token
-      const query = sqlTokenStore.getAndInvalidate(token);
+      // Execute SQL using the shared function
+      const result = await executeSqlWithToken(token);
 
-      if (!query) {
-        return c.json<ExecuteResponse>(
-          {
-            success: false,
-            error: 'Invalid or expired confirmation token',
-          },
-          401
-        );
+      if (
+        !result.success &&
+        result.error === 'Invalid or expired confirmation token'
+      ) {
+        return c.json<ExecuteResponse>(result, 401);
       }
 
-      // Execute the SQL query
-      try {
-        const result = await DatabaseManager.getInstance().execute(query);
-
-        // Safely convert bigint to avoid precision loss
-        const safeLastInsertRowid = (() => {
-          if (typeof result.lastInsertRowid === 'bigint') {
-            // Check if the bigint value is within safe integer range
-            if (result.lastInsertRowid <= Number.MAX_SAFE_INTEGER) {
-              return Number(result.lastInsertRowid);
-            } else {
-              // Return as string to preserve precision for large values
-              return result.lastInsertRowid.toString();
-            }
-          }
-          return result.lastInsertRowid;
-        })();
-
-        return c.json<ExecuteResponse>({
-          success: true,
-          query,
-          result: {
-            rowsAffected: result.rowsAffected,
-            lastInsertRowid: safeLastInsertRowid,
-            columns: result.columns,
-            rows: result.rows,
-          },
-          executedAt: new Date().toISOString(),
-        });
-      } catch (executionError) {
-        // Database execution error
-        return c.json<ExecuteResponse>(
-          {
-            success: false,
-            query,
-            error: `SQL execution failed: ${executionError instanceof Error ? executionError.message : String(executionError)}`,
-          },
-          500
-        );
+      if (!result.success && result.query) {
+        return c.json<ExecuteResponse>(result, 500);
       }
+
+      if (!result.success) {
+        return c.json<ExecuteResponse>(result, 500);
+      }
+
+      return c.json<ExecuteResponse>(result);
     } catch (error) {
       // General error (e.g., JSON parsing)
       return c.json<ExecuteResponse>(

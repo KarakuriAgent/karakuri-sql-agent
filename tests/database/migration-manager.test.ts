@@ -18,12 +18,12 @@ import {
 import { appDatabase } from '../../src/database/database-manager';
 
 describe('Migration Manager', () => {
-  const testMigrationsDir = join(process.cwd(), 'test-migrations');
-  const testSeedsDir = join(process.cwd(), 'test-seeds');
+  const testDatabaseDir = join(process.cwd(), 'test-database');
+  const testMigrationsDir = join(testDatabaseDir, 'migrations');
+  const testSeedsDir = join(testDatabaseDir, 'seeds');
 
   // Save original environment variables
-  const originalMigrationsPath = process.env.DATABASE_MIGRATIONS_PATH;
-  const originalSeedsPath = process.env.DATABASE_SEEDS_PATH;
+  const originalDatabaseUrl = process.env.DATABASE_URL;
 
   // Helper function to create ResultSet mock
   const createMockResult = (rows: any[] = []) => ({
@@ -36,9 +36,8 @@ describe('Migration Manager', () => {
   });
 
   beforeEach(async () => {
-    // Set test environment variables
-    process.env.DATABASE_MIGRATIONS_PATH = testMigrationsDir;
-    process.env.DATABASE_SEEDS_PATH = testSeedsDir;
+    // Set test environment variable to use test database
+    process.env.DATABASE_URL = `file:${join(testDatabaseDir, 'test.db')}`;
 
     // Reset mocks and set default return values
     vi.mocked(appDatabase.execute).mockClear();
@@ -47,6 +46,9 @@ describe('Migration Manager', () => {
     // Create test directories
     if (!existsSync(testMigrationsDir)) {
       mkdirSync(testMigrationsDir, { recursive: true });
+    }
+    if (!existsSync(testSeedsDir)) {
+      mkdirSync(testSeedsDir, { recursive: true });
     }
 
     // Mock console logs
@@ -80,19 +82,13 @@ describe('Migration Manager', () => {
       }
     };
 
-    await removeDirectory(testMigrationsDir);
-    await removeDirectory(testSeedsDir);
+    await removeDirectory(testDatabaseDir);
 
     // Restore environment variables
-    if (originalMigrationsPath !== undefined) {
-      process.env.DATABASE_MIGRATIONS_PATH = originalMigrationsPath;
+    if (originalDatabaseUrl !== undefined) {
+      process.env.DATABASE_URL = originalDatabaseUrl;
     } else {
-      delete process.env.DATABASE_MIGRATIONS_PATH;
-    }
-    if (originalSeedsPath !== undefined) {
-      process.env.DATABASE_SEEDS_PATH = originalSeedsPath;
-    } else {
-      delete process.env.DATABASE_SEEDS_PATH;
+      delete process.env.DATABASE_URL;
     }
 
     vi.restoreAllMocks();
@@ -570,8 +566,9 @@ describe('Migration Manager', () => {
       await runMigrations(appDatabase as any);
 
       // Verify execute was called the appropriate number of times
-      // Table creation + get applied + 4 SQL statements + record addition = 7 times
-      expect(appDatabase.execute).toHaveBeenCalledTimes(7);
+      // Migration table creation + get applied migrations + 4 SQL statements + record migration +
+      // seed table creation + get applied seeds = 9 times
+      expect(appDatabase.execute).toHaveBeenCalledTimes(9);
     });
 
     it('should handle SQL statements with semicolons in string literals', async () => {
