@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { sqlAgent } from '../agents/sql-agent';
 
 // Load configuration from environment variables
-const toolId = process.env.SQL_AGENT_TOOL_ID || 'sql-query-analyzer';
+const toolId = process.env.SQL_AGENT_TOOL_ID || 'sqlAgent';
 const toolDescription =
   process.env.SQL_AGENT_TOOL_DESCRIPTION ||
   'Perform database operations using natural language.';

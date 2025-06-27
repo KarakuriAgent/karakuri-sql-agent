@@ -4,7 +4,8 @@ import { DatabaseManager } from './database-manager';
 
 // Helper function to extract directory path from DATABASE_URL
 const getDatabaseDirectoryFromUrl = (): string => {
-  const databaseUrl = process.env.DATABASE_URL || 'file:../../database/app.db';
+  const databaseUrl =
+    process.env.DATABASE_URL || 'file:./example/database/app.db';
 
   if (databaseUrl.startsWith('file:')) {
     // Remove 'file:' prefix and get directory path
