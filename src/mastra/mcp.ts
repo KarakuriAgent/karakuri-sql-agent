@@ -22,6 +22,31 @@ const server = new MCPServer({
 const enableStdio = mcpConfig.enableStdio;
 const enableSSE = mcpConfig.enableSSE;
 const enableHTTP = mcpConfig.enableHTTP;
+const apiKey = mcpConfig.apiKey;
+
+// Authentication middleware for HTTP/SSE
+const authenticateRequest = (req: http.IncomingMessage): boolean => {
+  // Skip authentication if no API key is configured
+  if (!apiKey) {
+    return true;
+  }
+
+  // Check Authorization header (Bearer token)
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    return token === apiKey;
+  }
+
+  // Check API key in query parameters
+  const url = new URL(req.url || '', `http://${req.headers.host}`);
+  const apiKeyParam = url.searchParams.get('api_key');
+  if (apiKeyParam) {
+    return apiKeyParam === apiKey;
+  }
+
+  return false;
+};
 
 // Start the MCP server using stdio transport
 if (enableStdio) {
@@ -31,9 +56,26 @@ if (enableStdio) {
   console.log('Stdio interface disabled');
 }
 
+// Log authentication status
+if (apiKey) {
+  console.log('🔐 API key authentication enabled for HTTP/SSE interfaces');
+} else {
+  console.log('⚠️ No API key configured - HTTP/SSE interfaces are public');
+}
+
 // Start the MCP server using sse transport
 if (enableSSE) {
   const sseServer = http.createServer(async (req, res) => {
+    // Authenticate request
+    if (!authenticateRequest(req)) {
+      res.statusCode = 401;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(
+        JSON.stringify({ error: 'Unauthorized: Invalid or missing API key' })
+      );
+      return;
+    }
+
     await server.startSSE({
       url: new URL(
         req.url || '',
@@ -56,6 +98,16 @@ if (enableSSE) {
 // Start the MCP server using http transport
 if (enableHTTP) {
   const httpServer = http.createServer(async (req, res) => {
+    // Authenticate request
+    if (!authenticateRequest(req)) {
+      res.statusCode = 401;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(
+        JSON.stringify({ error: 'Unauthorized: Invalid or missing API key' })
+      );
+      return;
+    }
+
     await server.startHTTP({
       url: new URL(
         req.url || '',
