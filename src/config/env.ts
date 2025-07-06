@@ -19,6 +19,7 @@ export interface ServerConfig {
 
 export interface DatabaseConfig {
   url: string;
+  authToken?: string;
 }
 
 export interface MCPConfig {
@@ -142,6 +143,7 @@ const createConfig = (): AppConfig => {
       url:
         process.env.DATABASE_URL ||
         `file:${resolve(__dirname, '../../example/database/app.db')}`,
+      authToken: process.env.DATABASE_AUTH_TOKEN,
     },
     mcp: {
       serverName: process.env.MCP_SERVER_NAME || 'SQL agent server',
@@ -235,6 +237,9 @@ export const serverConfig = {
 export const databaseConfig = {
   get url() {
     return getConfigInternal().database.url;
+  },
+  get authToken() {
+    return getConfigInternal().database.authToken;
   },
 };
 
