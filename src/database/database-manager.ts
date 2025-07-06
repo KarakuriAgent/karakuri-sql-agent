@@ -25,6 +25,7 @@ export class DatabaseManager {
     if (!this.client) {
       this.client = createClient({
         url: this.getDatabaseUrl(),
+        authToken: databaseConfig.authToken,
       });
     }
     return this.client;
